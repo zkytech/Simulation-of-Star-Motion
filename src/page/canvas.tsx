@@ -1,5 +1,5 @@
 import * as React from 'react';
-
+import style from './style.module.less';
 /**
  * 生成随机RGB颜色
  */
@@ -44,7 +44,7 @@ type IProps = {
   initialNum: number;
   /** 恒星的体积 */
   centerSize: number;
-  ref?: (ref: Index) => any;
+  canvasRef?: (ref: Index) => any;
   /** 引力G值 */
   g: number;
   /** 是否显示ID */
@@ -296,8 +296,8 @@ export default class Index extends React.Component<IProps, IState> {
   mainProcess: any;
 
   componentDidMount() {
-    if (this.props.ref) {
-      this.props.ref(this);
+    if (this.props.canvasRef) {
+      this.props.canvasRef(this);
     }
     const canvas = this.canvas as HTMLCanvasElement;
     // 监听鼠标滚轮进行缩放
@@ -353,6 +353,19 @@ export default class Index extends React.Component<IProps, IState> {
           ref={ref => (this.canvas = ref)}
           style={{ backgroundColor: 'black' }}
         />
+          <ul className={style.info_panel}>
+            {this.state.stars.slice(1, 21).map(value => {
+              return (
+                <li key={value.id}>
+                  <span style={{ color: value.color }}>{value.id}</span>
+                  <span className={style.speed_info}>
+                    speed_x:{value.speed.x.toFixed(3)}&emsp;speed_y:
+                    {value.speed.y.toFixed(3)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
       </div>
     );
   }

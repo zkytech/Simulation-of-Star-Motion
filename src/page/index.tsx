@@ -19,7 +19,7 @@ const Index: FunctionComponent = () => {
         centerSize={centerSize}
         travelLength={tarvelLength}
         initialNum={starNum}
-        ref={canvas => setRef(canvas)}
+        canvasRef={canvas => setRef(canvas)}
         g={g}
         showID={showId}
         minSize={minSize}
@@ -28,7 +28,7 @@ const Index: FunctionComponent = () => {
         playSpeed={playSpeed}
       />
       <div className={style.control_panel}>
-        <ul>
+        <ul style={{ listStyle: 'none' }}>
           <li>
             <span className={style.input_prefix}>初始星球数量</span>
             <InputNumber

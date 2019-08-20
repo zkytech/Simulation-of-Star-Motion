@@ -21,7 +21,6 @@
 }
 
 .control_panel>ul>li {
-  list-style: none;
   line-height: 50px;
 }
 
@@ -29,4 +28,40 @@
   display: inline-block;
   width: 100px;
   cursor: default;
+}
+
+
+.info_panel {
+  list-style: none;
+  width: 150px;
+  position: fixed;
+  top: 20px;
+  left: 5px;
+  background-color: inherit;
+  padding: 0;
+  opacity: 0.1;
+}
+
+.info_panel:hover {
+  opacity: 1;
+}
+
+.info_panel>li {
+  height: 60px;
+  border: solid;
+  border-width: 1px;
+  width: 100%;
+  background-color: gray;
+  opacity: 0.6;
+  border-radius: 10px;
+  margin: 2px;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+  cursor: default
+}
+
+.speed_info {
+  position: relative;
+  display: block;
+  bottom: 20px;
+  left: 50px;
 }
