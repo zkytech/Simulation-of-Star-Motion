@@ -40,9 +40,7 @@ type IState = {
 type IProps = {
   /** 轨迹长度 */
   travelLength: number;
-  /** 刷新时间 */
-  refreshInterval: number;
-  /** 初始星球数量 */
+  /** 初始星体数量 */
   initialNum: number;
   /** 恒星的体积 */
   centerSize: number;
@@ -50,7 +48,15 @@ type IProps = {
   /** 引力G值 */
   g: number;
   /** 是否显示ID */
-  showID?: boolean;
+  showID: boolean;
+  /** 星体最大大小 */
+  maxSize: number;
+  /** 星体最小大小 */
+  minSize: number;
+  /** 吞噬模式 */
+  mergeMode: boolean;
+  /** 播放速度 */
+  playSpeed: number;
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -67,11 +73,14 @@ export default class Index extends React.Component<IProps, IState> {
 
   public static defaultProps: Partial<IProps> = {
     travelLength: 300,
-    refreshInterval: 10,
     initialNum: 200,
     centerSize: 10,
     g: 100,
-    showID: true
+    showID: true,
+    maxSize: 5,
+    minSize: 2,
+    mergeMode: false,
+    playSpeed: 1
   };
 
   canvas: HTMLCanvasElement | null = null;
@@ -94,7 +103,10 @@ export default class Index extends React.Component<IProps, IState> {
     for (let i = 1; i <= total; i++) {
       const x = Math.ceil(Math.random() * width);
       const y = Math.ceil(Math.random() * height);
-      const size = Math.ceil(Math.random() * 5);
+      const size = Math.ceil(
+        Math.random() * (this.props.maxSize - this.props.minSize) +
+          this.props.minSize
+      );
       const color = randomRGB();
       const speed = {
         x: Math.random() * 0.5 - 0.25,
@@ -108,7 +120,40 @@ export default class Index extends React.Component<IProps, IState> {
   };
 
   start = () => {
+    try {
+      clearInterval(this.mainProcess);
+    } catch {}
     this.setState({ stars: this.initStars(this.props.initialNum), g: {} });
+    const canvas = this.canvas as HTMLCanvasElement;
+    // 初始化数据，设置中心点
+    this.setState({
+      stars: this.initStars(this.props.initialNum),
+      centerPoint: { x: canvas.width / 2, y: canvas.height / 2 },
+      initCenterPoint: { x: canvas.width / 2, y: canvas.height / 2 }
+    });
+    const ctx2d = this.ctx2d as CanvasRenderingContext2D;
+    this.mainProcess = setInterval(() => {
+      // 重设宽高就会清空画布
+      canvas.height = document.documentElement.clientHeight - 5;
+      canvas.width = document.body.clientWidth;
+      const { centerPoint, scale, centerPointOffset } = this.state;
+      ctx2d.translate(
+        centerPoint.x * (1 - scale) + centerPointOffset.x,
+        centerPoint.y * (1 - scale) + centerPointOffset.y
+      );
+      ctx2d.scale(scale, scale);
+      // 计算引力
+      this.calcForce();
+      let { stars } = this.state;
+      stars.forEach((value, index) => {
+        // 绘制星球
+        this.drawStar(value);
+        // 移动星球
+        if (index === 0) return;
+        stars[index] = this.moveStar(value);
+      });
+      this.setState({ stars });
+    }, 20 / this.props.playSpeed);
   };
 
   /** 绘制轨迹线 */
@@ -134,17 +179,21 @@ export default class Index extends React.Component<IProps, IState> {
     ctx2d.fillStyle = color;
     ctx2d.fill();
     if (this.props.showID) {
+      ctx2d.beginPath();
+      ctx2d.fillStyle = 'white';
       ctx2d.fillText(starInfo.id, x + 10, y);
     }
     this.drawLine(starInfo);
   };
   /** 根据速度、加速度获取下一个坐标 */
   moveStar = (starInfo: StarInfo): StarInfo => {
-    let { x, y, size, travel } = starInfo;
+    let { x, y, travel } = starInfo;
+    const { travelLength } = this.props;
     const { g } = this.state;
     travel.push({ x, y });
     if (travel.length > this.props.travelLength)
-      travel = travel.slice(-this.props.travelLength);
+      travel = travelLength > 0 ? travel.slice(-travelLength) : [];
+
     const f = g[starInfo.id];
     const starG = Math.pow(starInfo.size, 3);
     // 先计算加速度对速度的影响
@@ -197,12 +246,12 @@ export default class Index extends React.Component<IProps, IState> {
           if (star1.size >= star2.size) {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
-            // star1.size = totalSize;
+            if (this.props.mergeMode) star1.size = totalSize;
             star1.speed = speed;
             changeList[star1.id] = star1;
           } else {
             deleteIndex.push(index1);
-            // star2.size = totalSize;
+            if (this.props.mergeMode) star2.size = totalSize;
             star2.speed = speed;
             changeList[star2.id] = star2;
           }
@@ -244,6 +293,8 @@ export default class Index extends React.Component<IProps, IState> {
     return { x: newX, y: newY };
   };
 
+  mainProcess: any;
+
   componentDidMount() {
     if (this.props.ref) {
       this.props.ref(this);
@@ -283,35 +334,7 @@ export default class Index extends React.Component<IProps, IState> {
     canvas.height = document.documentElement.clientHeight - 5;
     canvas.width = document.body.clientWidth;
     this.ctx2d = canvas.getContext('2d');
-    // 初始化数据，设置中心点
-    this.setState({
-      stars: this.initStars(this.props.initialNum),
-      centerPoint: { x: canvas.width / 2, y: canvas.height / 2 },
-      initCenterPoint: { x: canvas.width / 2, y: canvas.height / 2 }
-    });
-    const ctx2d = this.ctx2d as CanvasRenderingContext2D;
-    setInterval(() => {
-      // 重设宽高就会清空画布
-      canvas.height = document.documentElement.clientHeight - 5;
-      canvas.width = document.body.clientWidth;
-      const { centerPoint, scale, centerPointOffset } = this.state;
-      ctx2d.translate(
-        centerPoint.x * (1 - scale) + centerPointOffset.x,
-        centerPoint.y * (1 - scale) + centerPointOffset.y
-      );
-      ctx2d.scale(scale, scale);
-      // 计算引力
-      this.calcForce();
-      let { stars } = this.state;
-      stars.forEach((value, index) => {
-        // 绘制星球
-        this.drawStar(value);
-        // 移动星球
-        if (index === 0) return;
-        stars[index] = this.moveStar(value);
-      });
-      this.setState({ stars });
-    }, this.props.refreshInterval);
+    this.start();
   }
 
   // 放大
