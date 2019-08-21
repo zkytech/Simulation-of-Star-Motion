@@ -23,7 +23,7 @@ type StarInfo = {
   size: number;
   /** 速度 */
   speed: { x: number; y: number };
-  /** 轨迹 */
+  /** 尾迹 */
   travel: { x: number; y: number }[];
 };
 
@@ -32,7 +32,7 @@ type IState = {
 };
 
 type IProps = {
-  /** 轨迹长度 */
+  /** 尾迹长度 */
   travelLength: number;
   /** 初始星体数量 */
   initialNum: number;
@@ -44,13 +44,13 @@ type IProps = {
   /** 是否显示ID */
   showID: boolean;
   /** 星体最大大小 */
-  maxSize: number;
-  /** 星体最小大小 */
-  minSize: number;
+  sizeRange: [number, number];
   /** 吞噬模式 */
   mergeMode: boolean;
   /** 播放速度 */
   playSpeed: number;
+  /** 速度范围 */
+  speedRange: [number, number];
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -64,10 +64,10 @@ export default class Index extends React.Component<IProps, IState> {
     centerSize: 10,
     g: 100,
     showID: true,
-    maxSize: 5,
-    minSize: 2,
+    sizeRange: [2, 5],
     mergeMode: false,
-    playSpeed: 1
+    playSpeed: 1,
+    speedRange: [0, 0.25]
   };
 
   /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
@@ -96,17 +96,26 @@ export default class Index extends React.Component<IProps, IState> {
       speed: { x: 0, y: 0 },
       travel: []
     });
+    const sizeRange = this.props.sizeRange.sort();
+    const minSize = sizeRange[0];
+    const maxSize = sizeRange[1];
     for (let i = 1; i <= total; i++) {
       const x = Math.ceil(Math.random() * width);
       const y = Math.ceil(Math.random() * height);
-      const size = Math.ceil(
-        Math.random() * (this.props.maxSize - this.props.minSize) +
-          this.props.minSize
-      );
+      const size = Math.ceil(Math.random() * (maxSize - minSize) + minSize);
       const color = randomRGB();
+      const speedRange = this.props.speedRange.sort();
+      const minSpeed = speedRange[0];
+      const maxSpeed = speedRange[1];
       const speed = {
-        x: Math.random() * 0.5 - 0.25,
-        y: Math.random() * 0.5 - 0.25
+        x:
+          Math.random() *
+          (maxSpeed - minSpeed + minSpeed) *
+          (Math.random() > 0.5 ? 1 : -1),
+        y:
+          Math.random() *
+          (maxSpeed - minSpeed + minSpeed) *
+          (Math.random() > 0.5 ? 1 : -1)
       };
       const travel = [{ x, y }];
       stars.push({ id: `#${i}`, x, y, size, color, speed, travel });
@@ -153,7 +162,7 @@ export default class Index extends React.Component<IProps, IState> {
     }, 20 / this.props.playSpeed);
   };
 
-  /** 绘制轨迹线 */
+  /** 绘制尾迹线 */
   drawLine = (starInfo: StarInfo) => {
     const ctx2d = this.ctx2d as CanvasRenderingContext2D;
     let travel = starInfo.travel;

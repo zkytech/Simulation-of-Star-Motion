@@ -9,10 +9,11 @@ const Index: FunctionComponent = () => {
   const [ref, setRef] = useState<Canvas>();
   const [g, setG] = useState(30);
   const [showId, setShowId] = useState(true);
-  const [minSize, setMinSize] = useState(1);
-  const [maxSize, setMaxSize] = useState(2);
+  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 2]);
   const [mergeMode, setMergeMode] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(1);
+  const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]);
+
   return (
     <div>
       <Canvas
@@ -22,10 +23,10 @@ const Index: FunctionComponent = () => {
         canvasRef={canvas => setRef(canvas)}
         g={g}
         showID={showId}
-        minSize={minSize}
-        maxSize={maxSize}
+        sizeRange={sizeRange}
         mergeMode={mergeMode}
         playSpeed={playSpeed}
+        speedRange={speedRange}
       />
       <div className={style.control_panel}>
         <ul style={{ listStyle: 'none' }}>
@@ -59,11 +60,24 @@ const Index: FunctionComponent = () => {
             <Slider
               min={1}
               max={10}
-              value={[minSize, maxSize]}
+              value={sizeRange}
               range
               onChange={value => {
-                setMinSize((value as number[])[0]);
-                setMaxSize((value as number[])[1]);
+                setSizeRange(value as [number, number]);
+              }}
+              marks={{ 1: 1, 5: 5, 10: 10 }}
+            />
+          </li>
+          <li>
+            <span style={{ width: '100%' }}>普通星体速度范围</span>
+            <Slider
+              min={0}
+              max={10}
+              step={0.1}
+              value={speedRange}
+              range
+              onChange={value => {
+                setSpeedRange(value as [number, number]);
               }}
               marks={{ 1: 1, 5: 5, 10: 10 }}
             />
