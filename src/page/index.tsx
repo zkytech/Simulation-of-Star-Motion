@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useState } from 'react';
 import Canvas from './canvas';
-import { InputNumber, Button, Switch, Slider, Tooltip } from 'antd';
+import { InputNumber, Button, Switch, Slider, Tooltip, Icon } from 'antd';
 import style from './style.module.less';
 const Index: FunctionComponent = () => {
   const [starNum, setStarNum] = useState(500);
@@ -13,7 +13,7 @@ const Index: FunctionComponent = () => {
   const [mergeMode, setMergeMode] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(1);
   const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]);
-
+  const [paused, setPaused] = useState(false);
   return (
     <div>
       <Canvas
@@ -83,17 +83,19 @@ const Index: FunctionComponent = () => {
             />
           </li>
           <li>
-            <span style={{ width: '100%' }}>播放速度</span>
+            <Tooltip title="播放速度调整是通过加快运算节奏来实现的，这与计算机算力挂钩，当算力不足时，调整播放速度是无效的。此时可以通过减小尾迹长度或初始星体数量来减少运算量。">
+              <span style={{ width: '100%' }}>播放速度</span>
+            </Tooltip>
             <Slider
               min={0.1}
-              max={2}
+              max={5}
               value={playSpeed}
               onChange={value => {
                 //@ts-ignore
                 setPlaySpeed(value);
               }}
               step={0.1}
-              marks={{ 0.1: 'X 0.1', 0.5: 'X 0.5', 1: 'X 1', 2: 'X 2' }}
+              marks={{ 0.1: '0.1', 0.5: '0.5', 1: '1', 2: '2', 5: '5' }}
             />
           </li>
           <li>
@@ -111,6 +113,20 @@ const Index: FunctionComponent = () => {
             <Switch checked={showId} onChange={checked => setShowId(checked)} />
           </li>
           <li>
+            <Button
+              onClick={() => {
+                if (!paused) {
+                  (ref as Canvas).pause();
+                  setPaused(true);
+                } else {
+                  (ref as Canvas).start(false);
+                  setPaused(false);
+                }
+              }}
+              style={{ marginRight: '10px' }}
+            >
+              {paused ? '开始' : '暂停'}
+            </Button>
             <Button onClick={() => (ref as Canvas).start()} type={'primary'}>
               重新开始
             </Button>

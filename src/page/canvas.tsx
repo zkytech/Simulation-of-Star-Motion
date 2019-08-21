@@ -123,20 +123,27 @@ export default class Index extends React.Component<IProps, IState> {
 
     return stars;
   };
+  pause = () => {
+    if (this.mainProcess) {
+      clearInterval(this.mainProcess);
+    }
+  };
 
   /** 开始绘制 */
-  start = () => {
+  start = (init: boolean = true, playSpeed: number = this.props.playSpeed) => {
     // 如果已经有interval先清除
     if (this.mainProcess) {
       clearInterval(this.mainProcess);
     }
     const canvas = this.canvas as HTMLCanvasElement;
-    // 初始化数据，设置中心点
-    this.centerPoint = { x: canvas.width / 2, y: canvas.height / 2 };
-    this.setState({
-      stars: this.initStars(this.props.initialNum)
-    });
     const ctx2d = this.ctx2d as CanvasRenderingContext2D;
+    if (init) {
+      // 初始化数据，设置中心点
+      this.centerPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+      this.setState({
+        stars: this.initStars(this.props.initialNum)
+      });
+    }
     this.mainProcess = setInterval(() => {
       // 重设宽高清空画布
       canvas.height = document.documentElement.clientHeight - 5;
@@ -287,6 +294,14 @@ export default class Index extends React.Component<IProps, IState> {
         })
     });
   };
+
+  componentWillReceiveProps(nextProps: IProps) {
+    if (nextProps.playSpeed !== this.props.playSpeed) {
+      // 实时控制播放速度
+      console.log('速度改变', nextProps.playSpeed);
+      this.start(false, nextProps.playSpeed);
+    }
+  }
 
   // /** 窗口坐标系转画布坐标系 */
   // transCord = (x: number, y: number) => {
