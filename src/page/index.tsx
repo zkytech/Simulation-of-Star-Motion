@@ -9,8 +9,8 @@ const Index: FunctionComponent = () => {
   const [ref, setRef] = useState<Canvas>();
   const [g, setG] = useState(30);
   const [showId, setShowId] = useState(true);
-  const [minSize, setMinSize] = useState(3);
-  const [maxSize, setMaxSize] = useState(5);
+  const [minSize, setMinSize] = useState(1);
+  const [maxSize, setMaxSize] = useState(2);
   const [mergeMode, setMergeMode] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(1);
   return (
@@ -97,7 +97,9 @@ const Index: FunctionComponent = () => {
             <Switch checked={showId} onChange={checked => setShowId(checked)} />
           </li>
           <li>
-            <Button onClick={() => (ref as Canvas).start()}>重新开始</Button>
+            <Button onClick={() => (ref as Canvas).start()} type={'primary'}>
+              重新开始
+            </Button>
           </li>
         </ul>
       </div>

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import style from './style.module.less';
+import { Button } from 'antd';
 /**
  * 生成随机RGB颜色
  */
@@ -28,13 +29,6 @@ type StarInfo = {
 
 type IState = {
   stars: StarInfo[];
-  g: { [key: string]: { x: number; y: number } };
-  scale: number;
-  centerPointOffset: { x: number; y: number };
-  centerPoint: { x: number; y: number };
-  initCenterPoint: { x: number; y: number };
-  moving: boolean;
-  mousePosition: { x: number; y: number };
 };
 
 type IProps = {
@@ -61,14 +55,7 @@ type IProps = {
 
 export default class Index extends React.Component<IProps, IState> {
   readonly state: IState = {
-    stars: [],
-    g: {},
-    scale: 1,
-    centerPointOffset: { x: 0, y: 0 },
-    centerPoint: { x: 0, y: 0 },
-    initCenterPoint: { x: 0, y: 0 },
-    moving: false,
-    mousePosition: { x: 0, y: 0 }
+    stars: []
   };
 
   public static defaultProps: Partial<IProps> = {
@@ -83,9 +70,18 @@ export default class Index extends React.Component<IProps, IState> {
     playSpeed: 1
   };
 
+  /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
   canvas: HTMLCanvasElement | null = null;
   ctx2d: CanvasRenderingContext2D | null = null;
+  mainProcess: any;
+  g: { [key: string]: { x: number; y: number } } = {};
+  scale: number = 1;
+  centerPointOffset: { x: number; y: number } = { x: 0, y: 0 };
+  centerPoint: { x: number; y: number } = { x: 0, y: 0 };
+  moving: boolean = false;
+  mousePosition: { x: number; y: number } = { x: 0, y: 0 };
 
+  /** 获取初始恒星 */
   initStars = (total: number) => {
     const width = (this.canvas as HTMLCanvasElement).width;
     const height = (this.canvas as HTMLCanvasElement).height;
@@ -119,37 +115,38 @@ export default class Index extends React.Component<IProps, IState> {
     return stars;
   };
 
+  /** 开始绘制 */
   start = () => {
-    try {
+    // 如果已经有interval先清除
+    if (this.mainProcess) {
       clearInterval(this.mainProcess);
-    } catch {}
-    this.setState({ stars: this.initStars(this.props.initialNum), g: {} });
+    }
     const canvas = this.canvas as HTMLCanvasElement;
     // 初始化数据，设置中心点
+    this.centerPoint = { x: canvas.width / 2, y: canvas.height / 2 };
     this.setState({
-      stars: this.initStars(this.props.initialNum),
-      centerPoint: { x: canvas.width / 2, y: canvas.height / 2 },
-      initCenterPoint: { x: canvas.width / 2, y: canvas.height / 2 }
+      stars: this.initStars(this.props.initialNum)
     });
     const ctx2d = this.ctx2d as CanvasRenderingContext2D;
     this.mainProcess = setInterval(() => {
-      // 重设宽高就会清空画布
+      // 重设宽高清空画布
       canvas.height = document.documentElement.clientHeight - 5;
       canvas.width = document.body.clientWidth;
-      const { centerPoint, scale, centerPointOffset } = this.state;
+      //
       ctx2d.translate(
-        centerPoint.x * (1 - scale) + centerPointOffset.x,
-        centerPoint.y * (1 - scale) + centerPointOffset.y
+        this.centerPoint.x * (1 - this.scale) + this.centerPointOffset.x,
+        this.centerPoint.y * (1 - this.scale) + this.centerPointOffset.y
       );
-      ctx2d.scale(scale, scale);
+      ctx2d.scale(this.scale, this.scale);
       // 计算引力
       this.calcForce();
       let { stars } = this.state;
       stars.forEach((value, index) => {
-        // 绘制星球
+        // 绘制星体
         this.drawStar(value);
-        // 移动星球
-        if (index === 0) return;
+        // 如果是中心恒星，不移动
+        if (value.id === '#0') return;
+        // 移动星体
         stars[index] = this.moveStar(value);
       });
       this.setState({ stars });
@@ -170,7 +167,7 @@ export default class Index extends React.Component<IProps, IState> {
     ctx2d.stroke();
   };
 
-  /** 绘制星球 */
+  /** 绘制星体 */
   drawStar = (starInfo: StarInfo) => {
     const ctx2d = this.ctx2d as CanvasRenderingContext2D;
     const { x, y, size, color } = starInfo;
@@ -189,12 +186,11 @@ export default class Index extends React.Component<IProps, IState> {
   moveStar = (starInfo: StarInfo): StarInfo => {
     let { x, y, travel } = starInfo;
     const { travelLength } = this.props;
-    const { g } = this.state;
     travel.push({ x, y });
     if (travel.length > this.props.travelLength)
       travel = travelLength > 0 ? travel.slice(-travelLength) : [];
 
-    const f = g[starInfo.id];
+    const f = this.g[starInfo.id];
     const starG = Math.pow(starInfo.size, 3);
     // 先计算加速度对速度的影响
     starInfo.speed.x += f.x / starG;
@@ -211,7 +207,7 @@ export default class Index extends React.Component<IProps, IState> {
     // 计算所有点之间的引力
   };
 
-  /** 计算引力，并存入字典 */
+  /** 计算引力、判断撞击 */
   calcForce = () => {
     const { stars } = this.state;
     let result: any = {};
@@ -242,7 +238,7 @@ export default class Index extends React.Component<IProps, IState> {
             x: P_x / (star1G + star2G),
             y: P_y / (star1G + star2G)
           };
-          // 对于未被清除的星球要计算其动量,对其受力和大小进行重新计算,由于真正的星体也不完全是刚性的，这里当作是只要碰撞就不会再分开
+          // 对于未被清除的星体要计算其动量,对其受力和大小进行重新计算,由于真正的星体也不完全是刚性的，这里当作是只要碰撞就不会再分开
           if (star1.size >= star2.size) {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
@@ -269,9 +265,8 @@ export default class Index extends React.Component<IProps, IState> {
         result[star2.id].y += yF;
       });
     });
-
+    this.g = result;
     this.setState({
-      g: result,
       stars: stars
         .filter((value, index) => deleteIndex.indexOf(index) === -1)
         .map(value => {
@@ -284,17 +279,15 @@ export default class Index extends React.Component<IProps, IState> {
     });
   };
 
-  /** 窗口坐标系转画布坐标系 */
-  transCord = (x: number, y: number) => {
-    const { centerPoint, scale } = this.state;
-    // 坐标除以scale减去偏移量就是画布坐标
-    const newX = x / scale - (centerPoint.x * (1 - scale)) / scale;
-    const newY = y / scale - (centerPoint.y * (1 - scale)) / scale;
-    return { x: newX, y: newY };
-  };
+  // /** 窗口坐标系转画布坐标系 */
+  // transCord = (x: number, y: number) => {
+  //   const { centerPoint, scale } = this.state;
+  //   const newX = x / scale - (centerPoint.x * (1 - scale)) / scale;
+  //   const newY = y / scale - (centerPoint.y * (1 - scale)) / scale;
+  //   return { x: newX, y: newY };
+  // };
 
-  mainProcess: any;
-
+  /** 组件加载完成后进行初始化动作 */
   componentDidMount() {
     if (this.props.canvasRef) {
       this.props.canvasRef(this);
@@ -309,41 +302,39 @@ export default class Index extends React.Component<IProps, IState> {
         this.zoomOut();
       }
     });
-
+    // 监听鼠标点击进行拖动
     canvas.addEventListener('mousedown', e => {
-      this.setState({
-        moving: true,
-        mousePosition: { x: e.clientX, y: e.clientY }
-      });
+      this.moving = true;
+      this.mousePosition = { x: e.clientX, y: e.clientY };
     });
     canvas.addEventListener('mouseup', e => {
-      this.setState({ moving: false });
+      this.moving = false;
     });
-    // 平移
     canvas.addEventListener('mousemove', e => {
-      if (this.state.moving) {
-        const { mousePosition, centerPointOffset } = this.state;
-        const offsetX = e.clientX - mousePosition.x + centerPointOffset.x;
-        const offsetY = e.clientY - mousePosition.y + centerPointOffset.y;
-        this.setState({
-          centerPointOffset: { x: offsetX, y: offsetY },
-          mousePosition: { x: e.clientX, y: e.clientY }
-        });
+      if (this.moving) {
+        const offsetX =
+          e.clientX - this.mousePosition.x + this.centerPointOffset.x;
+        const offsetY =
+          e.clientY - this.mousePosition.y + this.centerPointOffset.y;
+        this.centerPointOffset = { x: offsetX, y: offsetY };
+        this.mousePosition = { x: e.clientX, y: e.clientY };
       }
     });
+    // 设置画布宽高
     canvas.height = document.documentElement.clientHeight - 5;
     canvas.width = document.body.clientWidth;
     this.ctx2d = canvas.getContext('2d');
+    // 开始绘制
     this.start();
   }
 
   // 放大
   zoomIn = () => {
-    this.setState({ scale: this.state.scale * 1.1 });
+    this.scale = this.scale * 1.1;
   };
   // 缩小
   zoomOut = () => {
-    this.setState({ scale: this.state.scale * 0.9 });
+    this.scale = this.scale * 0.9;
   };
 
   public render() {
@@ -353,19 +344,29 @@ export default class Index extends React.Component<IProps, IState> {
           ref={ref => (this.canvas = ref)}
           style={{ backgroundColor: 'black' }}
         />
-          <ul className={style.info_panel}>
-            {this.state.stars.slice(1, 21).map(value => {
-              return (
-                <li key={value.id}>
-                  <span style={{ color: value.color }}>{value.id}</span>
-                  <span className={style.speed_info}>
-                    speed_x:{value.speed.x.toFixed(3)}&emsp;speed_y:
-                    {value.speed.y.toFixed(3)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+        <ul className={style.info_panel}>
+          {this.state.stars.slice(1, 21).map(value => {
+            return (
+              <li key={value.id}>
+                <span style={{ color: value.color }}>{value.id}</span>
+                <span className={style.speed_info}>
+                  speed_x:{value.speed.x.toFixed(3)}&emsp;speed_y:
+                  {value.speed.y.toFixed(3)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <Button
+          onClick={() => {
+            this.centerPointOffset = { x: 0, y: 0 };
+            this.scale = 1;
+          }}
+          type={'ghost'}
+          className={style.reset_button}
+        >
+          视野重置
+        </Button>
       </div>
     );
   }
