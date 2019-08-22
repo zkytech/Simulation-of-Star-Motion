@@ -47,8 +47,8 @@ type IProps = {
   sandboxMode: boolean;
   /** 沙盒数据 */
   sandboxData: SandboxData[];
-    /** 步长（步长越小，计算精度越高） */
-    step: number;
+  /** 步长（步长越小，计算精度越高） */
+  step: number;
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -63,7 +63,7 @@ export default class Index extends React.Component<IProps, IState> {
     mergeMode: false,
     playSpeed: 1,
     speedRange: [0, 5],
-    step:1
+    step: 1
   };
 
   camera = new THREE.PerspectiveCamera(
@@ -248,7 +248,7 @@ export default class Index extends React.Component<IProps, IState> {
   /** 根据速度、加速度获取下一个坐标 */
   moveStar = (starInfo: StarInfo): StarInfo => {
     let { x, y, z, travel, speed } = starInfo;
-    const { travelLength,step } = this.props;
+    const { travelLength, step } = this.props;
     travel.push({ x, y, z });
     if (travel.length > travelLength)
       travel = travelLength > 0 ? travel.slice(-travelLength) : [];
@@ -257,22 +257,22 @@ export default class Index extends React.Component<IProps, IState> {
     const starG = Math.pow(starInfo.size, 3);
 
     // 先计算加速度对速度的影响
-    speed.x += f.x / starG*step;
-    speed.y += f.y / starG*step;
-    speed.z += f.z / starG*step;
+    speed.x += (f.x / starG) * step;
+    speed.y += (f.y / starG) * step;
+    speed.z += (f.z / starG) * step;
     // 然后将速度直接加到坐标上
-    x += speed.x*step;
-    y += speed.y*step;
-    z += speed.z*step;
+    x += speed.x * step;
+    y += speed.y * step;
+    z += speed.z * step;
     // 移动星体
-    this.spheres[starInfo.id].translateX(speed.x*step);
-    this.spheres[starInfo.id].translateY(speed.y*step);
-    this.spheres[starInfo.id].translateZ(speed.z*step);
+    this.spheres[starInfo.id].translateX(speed.x * step);
+    this.spheres[starInfo.id].translateY(speed.y * step);
+    this.spheres[starInfo.id].translateZ(speed.z * step);
     // 移动id标签
     if (this.props.showID) {
-      this.textSprite[starInfo.id].translateX(speed.x*step);
-      this.textSprite[starInfo.id].translateY(speed.y*step);
-      this.textSprite[starInfo.id].translateZ(speed.z*step);
+      this.textSprite[starInfo.id].translateX(speed.x * step);
+      this.textSprite[starInfo.id].translateY(speed.y * step);
+      this.textSprite[starInfo.id].translateZ(speed.z * step);
     }
 
     return {
@@ -547,7 +547,7 @@ export default class Index extends React.Component<IProps, IState> {
     return (
       <div>
         <div ref={'container'} />
-        <ul className={style.info_panel}>
+        <ul className={style.info_panel} hidden={window.screen.width < 720}>
           {this.stars.slice(0, 20).map(value => {
             return (
               <li key={value.id}>

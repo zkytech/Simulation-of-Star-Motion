@@ -68,7 +68,7 @@ export default class Index extends React.Component<IProps, IState> {
     speedRange: [0, 0.25],
     sandboxMode: false,
     sandboxData: [],
-    step:1
+    step: 1
   };
 
   /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
@@ -214,7 +214,7 @@ export default class Index extends React.Component<IProps, IState> {
   /** 根据速度、加速度获取下一个坐标 */
   moveStar = (starInfo: StarInfo): StarInfo => {
     let { x, y, travel } = starInfo;
-    const { travelLength ,step} = this.props;
+    const { travelLength, step } = this.props;
     travel.push({ x, y });
     if (travel.length > this.props.travelLength)
       travel = travelLength > 0 ? travel.slice(-travelLength) : [];
@@ -222,8 +222,8 @@ export default class Index extends React.Component<IProps, IState> {
     const f = this.g[starInfo.id];
     const starG = Math.pow(starInfo.size, 3);
     // 先计算加速度对速度的影响
-    starInfo.speed.x += f.x / starG * step;
-    starInfo.speed.y += f.y / starG * step;
+    starInfo.speed.x += (f.x / starG) * step;
+    starInfo.speed.y += (f.y / starG) * step;
     // 然后将速度直接加到坐标上
     x += starInfo.speed.x * step;
     y += starInfo.speed.y * step;
@@ -389,7 +389,7 @@ export default class Index extends React.Component<IProps, IState> {
           ref={ref => (this.canvas = ref)}
           style={{ backgroundColor: 'black' }}
         />
-        <ul className={style.info_panel}>
+        <ul className={style.info_panel} hidden={window.screen.width < 720}>
           {this.state.stars.slice(0, 20).map(value => {
             return (
               <li key={value.id}>

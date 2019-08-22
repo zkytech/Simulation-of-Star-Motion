@@ -22,48 +22,10 @@ const Index: FunctionComponent = () => {
   const [sandboxMode, setSandboxMode] = useState(false); // 沙盒模式
   const [sandboxData, setSandboxData] = useState<SandboxData[]>([]); // 沙盒数据
   const [step, setStep] = useState(1); // 步长，步长越小，计算精度越高
-  return (
-    <div>
-      {mode === '2d' ? (
-        <Canvas2D
-          centerSize={centerSize}
-          travelLength={tarvelLength}
-          initialNum={starNum}
-          canvasRef={canvas => {
-            //@ts-ignore
-            setRef(canvas);
-          }}
-          g={g}
-          showID={showId}
-          sizeRange={sizeRange}
-          mergeMode={mergeMode}
-          playSpeed={playSpeed}
-          speedRange={speedRange}
-          sandboxData={sandboxData}
-          sandboxMode={sandboxMode}
-          step={step}
-        />
-      ) : (
-        <Canvas3D
-          centerSize={centerSize}
-          travelLength={tarvelLength}
-          initialNum={starNum}
-          canvasRef={canvas => {
-            //@ts-ignore
-            setRef(canvas);
-          }}
-          g={g}
-          showID={showId}
-          sizeRange={sizeRange}
-          mergeMode={mergeMode}
-          playSpeed={playSpeed}
-          speedRange={speedRange}
-          sandboxMode={sandboxMode}
-          sandboxData={sandboxData}
-          step={step}
-        />
-      )}
-      <div className={style.control_panel}>
+  const [phonePanelVisible, setPhonePanelVisible] = useState(false); // 手机版的控制面板是否可见
+  const getcontrolPanel = (className?: string) => {
+    return (
+      <div className={className}>
         <ul style={{ listStyle: 'none' }}>
           <li>
             <span>3D模式</span>
@@ -239,6 +201,66 @@ const Index: FunctionComponent = () => {
           </li>
         </ul>
       </div>
+    );
+  };
+
+  return (
+    <div>
+      {mode === '2d' ? (
+        <Canvas2D
+          centerSize={centerSize}
+          travelLength={tarvelLength}
+          initialNum={starNum}
+          canvasRef={canvas => {
+            //@ts-ignore
+            setRef(canvas);
+          }}
+          g={g}
+          showID={showId}
+          sizeRange={sizeRange}
+          mergeMode={mergeMode}
+          playSpeed={playSpeed}
+          speedRange={speedRange}
+          sandboxData={sandboxData}
+          sandboxMode={sandboxMode}
+          step={step}
+        />
+      ) : (
+        <Canvas3D
+          centerSize={centerSize}
+          travelLength={tarvelLength}
+          initialNum={starNum}
+          canvasRef={canvas => {
+            //@ts-ignore
+            setRef(canvas);
+          }}
+          g={g}
+          showID={showId}
+          sizeRange={sizeRange}
+          mergeMode={mergeMode}
+          playSpeed={playSpeed}
+          speedRange={speedRange}
+          sandboxMode={sandboxMode}
+          sandboxData={sandboxData}
+          step={step}
+        />
+      )}
+      {window.screen.width < 720 ? (
+        <Button
+          style={{ position: 'fixed', top: '10px', left: '10px' }}
+          onClick={() => {
+            //@ts-ignore
+            ref.pause();
+            setPaused(true);
+            setPhonePanelVisible(true);
+          }}
+        >
+          设置
+        </Button>
+      ) : (
+        ''
+      )}
+      {window.screen.width > 720 ? getcontrolPanel(style.control_panel) : ''}
       <Modal
         visible={modalVisble}
         onCancel={() => {
@@ -263,6 +285,20 @@ const Index: FunctionComponent = () => {
             }, 100);
           }}
         />
+      </Modal>
+      <Modal
+        visible={phonePanelVisible}
+        onCancel={() => {
+          setPhonePanelVisible(false);
+          // 取消时清除暂停状态
+          setPaused(false);
+          //@ts-ignore
+          ref.start(false);
+        }}
+        width={600}
+        footer={null}
+      >
+        {getcontrolPanel(style.control_panel_phone)}
       </Modal>
     </div>
   );
