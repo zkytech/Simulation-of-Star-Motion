@@ -3,7 +3,7 @@ import * as React from 'react';
 import style from '../style.module.less';
 import { Button } from 'antd';
 import { randomRGB } from './utils';
-
+import Hammer from 'hammerjs';
 type StarInfo = {
   id: string;
   /** 坐标 */
@@ -347,14 +347,60 @@ export default class Index extends React.Component<IProps, IState> {
         this.zoomOut();
       }
     });
+    // 移动端缩放处理
+    const hammer = new Hammer(canvas);
+    hammer.get('pinch').set({ enable: true });
+    hammer.on('pinchin', e => {
+      // 两指相互靠近
+      if (e.distance > 5) {
+        // 排除手指抖动
+        this.zoomOut(true);
+      }
+    });
+    hammer.on('pinchout', e => {
+      // 两指相互原理
+      if (e.distance > 5) {
+        this.zoomIn(true);
+      }
+    });
+    // 移动端拖动处理
+    canvas.addEventListener('touchstart', e => {
+      this.moving = true;
+      this.mousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+    canvas.addEventListener('touchend', e => {
+      this.moving = false;
+    });
+    canvas.addEventListener('touchmove', e => {
+      if (e.touches.length === 2) {
+      } else {
+        if (this.moving) {
+          const offsetX =
+            e.touches[0].clientX -
+            this.mousePosition.x +
+            this.centerPointOffset.x;
+          const offsetY =
+            e.touches[0].clientY -
+            this.mousePosition.y +
+            this.centerPointOffset.y;
+          this.centerPointOffset = { x: offsetX, y: offsetY };
+          this.mousePosition = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
+          };
+        }
+      }
+    });
     // 监听鼠标点击进行拖动
     canvas.addEventListener('mousedown', e => {
       this.moving = true;
       this.mousePosition = { x: e.clientX, y: e.clientY };
     });
+
     canvas.addEventListener('mouseup', e => {
       this.moving = false;
     });
+
     canvas.addEventListener('mousemove', e => {
       if (this.moving) {
         const offsetX =
@@ -365,6 +411,7 @@ export default class Index extends React.Component<IProps, IState> {
         this.mousePosition = { x: e.clientX, y: e.clientY };
       }
     });
+
     // 设置画布宽高
     canvas.height = document.documentElement.clientHeight - 5;
     canvas.width = document.body.clientWidth;
@@ -374,12 +421,12 @@ export default class Index extends React.Component<IProps, IState> {
   }
 
   // 放大
-  zoomIn = () => {
-    this.scale = this.scale * 1.1;
+  zoomIn = (slow: boolean = false) => {
+    this.scale = slow ? this.scale * 1.01 : this.scale * 1.1;
   };
   // 缩小
-  zoomOut = () => {
-    this.scale = this.scale * 0.9;
+  zoomOut = (slow: boolean = false) => {
+    this.scale = slow ? this.scale * 0.99 : this.scale * 0.9;
   };
 
   public render() {
