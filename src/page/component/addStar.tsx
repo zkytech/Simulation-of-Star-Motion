@@ -141,14 +141,18 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
           />
         </Col>
         <Col span={1}>
-          <Icon
-            className={style.dynamic_delete_button}
-            type="minus-circle-o"
-            onClick={() => {
-              setRowNum(rowNum - 1);
-              setRowData(rowData.filter((data, index) => index !== i));
-            }}
-          />
+          {rowNum > 1 ? (
+            <Icon
+              className={style.dynamic_delete_button}
+              type="minus-circle-o"
+              onClick={() => {
+                setRowNum(rowNum - 1);
+                setRowData(rowData.filter((data, index) => index !== i));
+              }}
+            />
+          ) : (
+            ''
+          )}
         </Col>
       </Row>
     );

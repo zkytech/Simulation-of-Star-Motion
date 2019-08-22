@@ -21,6 +21,7 @@ const Index: FunctionComponent = () => {
   const [modalVisble, setModalVisble] = useState(false); // 模态框可视状态
   const [sandboxMode, setSandboxMode] = useState(false); // 沙盒模式
   const [sandboxData, setSandboxData] = useState<SandboxData[]>([]); // 沙盒数据
+  const [step, setStep] = useState(1); // 步长，步长越小，计算精度越高
   return (
     <div>
       {mode === '2d' ? (
@@ -40,6 +41,7 @@ const Index: FunctionComponent = () => {
           speedRange={speedRange}
           sandboxData={sandboxData}
           sandboxMode={sandboxMode}
+          step={step}
         />
       ) : (
         <Canvas3D
@@ -58,6 +60,7 @@ const Index: FunctionComponent = () => {
           speedRange={speedRange}
           sandboxMode={sandboxMode}
           sandboxData={sandboxData}
+          step={step}
         />
       )}
       <div className={style.control_panel}>
@@ -132,6 +135,19 @@ const Index: FunctionComponent = () => {
                 setSpeedRange(value as [number, number]);
               }}
               marks={{ 1: 1, 5: 5, 10: 10 }}
+            />
+          </li>
+          <li>
+            <Tooltip title="数值越小精度越高">
+              <span style={{ width: '100%' }}>计算精度</span>
+            </Tooltip>
+            <Slider
+              min={0.1}
+              max={1}
+              step={0.1}
+              value={step}
+              onChange={value => setStep(value as number)}
+              marks={{ 0.1: 0.1, 0.5: 0.5, 1: 1 }}
             />
           </li>
           <li>
