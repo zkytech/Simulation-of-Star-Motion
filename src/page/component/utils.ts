@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-
+import { saveAs } from 'file-saver';
 /**
  * 生成随机RGB颜色
  */
@@ -162,4 +162,9 @@ export const makeTextSprite = (message: string, parameters?: SpriteParam) => {
   sprite.scale.set(10, 5, 0);
 
   return sprite;
+};
+
+export const saveAsJson = (data: any, fileName: string) => {
+  const blob = new Blob([JSON.stringify(data)], { type: '' });
+  saveAs(blob, fileName);
 };

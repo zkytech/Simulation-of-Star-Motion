@@ -1,7 +1,8 @@
 /** 添加自定义星体的面板 */
 import React, { FunctionComponent, useState } from 'react';
-import { Row, Col, InputNumber, Input, Button, Icon } from 'antd';
+import { Row, Col, InputNumber, Input, Button, Icon, Upload } from 'antd';
 import style from '../style.module.less';
+import { saveAsJson } from './utils';
 
 type IProps = {
   mode: '2d' | '3d';
@@ -165,11 +166,41 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
       >
         <Icon type="plus" /> 增加星体
       </Button>
+      <Upload
+        beforeUpload={(file: File, fileList: any[]): false => {
+          const fileReader = new FileReader();
+          fileReader.onload = (e: any) => {
+            // 读取完成后的回调
+            const jsonText = e.target.result;
+            const data = JSON.parse(jsonText);
+            setRowData(data);
+            setRowNum(2);
+          };
+          fileReader.readAsText(file);
+          return false;
+        }}
+        showUploadList={false}
+        style={{ marginLeft: '10px' }}
+        accept={'.json'}
+      >
+        <Button type={'dashed'}>
+          <Icon type="upload" /> 导入星体数据
+        </Button>
+      </Upload>
       &emsp;&emsp;&emsp;
       {mode === '2d'
         ? '2D模式屏幕中心坐标为屏幕分辨率/2'
         : '3D模式屏幕中心坐标为(0,0,0)'}
       {dataRows}
+      <Button
+        onClick={() => {
+          saveAsJson(rowData, `${new Date().toDateString()}星体数据.json`);
+        }}
+        style={{ position: 'absolute', right: '130px', bottom: '10px' }}
+        type={'link'}
+      >
+        导出星体数据
+      </Button>
       <Button
         onClick={() => onSubmit(rowData)}
         type={'primary'}
