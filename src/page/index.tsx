@@ -12,8 +12,8 @@ const Index: FunctionComponent = () => {
   const [ref, setRef] = useState<Canvas3D | Canvas2D>(); // ref
   const [g, setG] = useState(30); // 引力常量
   const [showId, setShowId] = useState(true); // 是否显示id
-  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 2]); // 星体大小范围
-  const [mergeMode, setMergeMode] = useState(false); // 吞噬模式
+  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 5]); // 星体大小范围
+  const [mergeMode, setMergeMode] = useState(true); // 吞噬模式
   const [playSpeed, setPlaySpeed] = useState(1); // 播放速度（支持程度与客户端电脑算力相关）
   const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]); // 星体初始速度范围
   const [paused, setPaused] = useState(false); // 暂停状态
@@ -23,6 +23,7 @@ const Index: FunctionComponent = () => {
   const [sandboxData, setSandboxData] = useState<SandboxData[]>([]); // 沙盒数据
   const [step, setStep] = useState(1); // 步长，步长越小，计算精度越高
   const [phonePanelVisible, setPhonePanelVisible] = useState(false); // 手机版的控制面板是否可见
+  const [disableCenter, setDisableCenter] = useState(true); // 是否禁用中心天体
   const getcontrolPanel = (className?: string) => {
     return (
       <div className={className}>
@@ -38,11 +39,14 @@ const Index: FunctionComponent = () => {
                   setG(300);
                   setTravelLength(100);
                   setShowId(false);
+                  setDisableCenter(false);
                 } else {
                   setStarNum(500);
                   setG(30);
                   setTravelLength(300);
-                  setShowId(true);
+                  setSizeRange([1, 5]);
+                  setMergeMode(true);
+                  setDisableCenter(true);
                 }
               }}
             />
@@ -139,6 +143,13 @@ const Index: FunctionComponent = () => {
             />
           </li>
           <li>
+            <span>中心天体</span>
+            <Switch
+              checked={!disableCenter}
+              onChange={checked => setDisableCenter(!checked)}
+            />
+          </li>
+          <li>
             <span>显示ID</span>
             <Switch checked={showId} onChange={checked => setShowId(checked)} />
           </li>
@@ -224,6 +235,7 @@ const Index: FunctionComponent = () => {
           sandboxData={sandboxData}
           sandboxMode={sandboxMode}
           step={step}
+          disableCenter={disableCenter}
         />
       ) : (
         <Canvas3D
@@ -243,6 +255,7 @@ const Index: FunctionComponent = () => {
           sandboxMode={sandboxMode}
           sandboxData={sandboxData}
           step={step}
+          disableCenter={disableCenter}
         />
       )}
       {window.screen.width < 720 ? (

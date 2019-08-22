@@ -49,6 +49,8 @@ type IProps = {
   sandboxData: SandboxData[];
   /** 步长（步长越小，计算精度越高） */
   step: number;
+  /** 隐藏中心恒星 */
+  disableCenter: boolean;
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -63,7 +65,8 @@ export default class Index extends React.Component<IProps, IState> {
     mergeMode: false,
     playSpeed: 1,
     speedRange: [0, 5],
-    step: 1
+    step: 1,
+    disableCenter: false
   };
 
   camera = new THREE.PerspectiveCamera(
@@ -86,6 +89,7 @@ export default class Index extends React.Component<IProps, IState> {
   stars: StarInfo[] = [];
   animateFrame: any;
   textSprite: { [key: string]: THREE.Sprite } = {};
+  light: THREE.Light | null = null;
 
   /** 获取初始星体列表 */
   initStars = (total: number) => {
@@ -107,16 +111,19 @@ export default class Index extends React.Component<IProps, IState> {
     const height = window.innerHeight;
     let stars: StarInfo[] = [];
     // 先加入恒星
-    stars.push({
-      id: '#0',
-      x: 0,
-      y: 0,
-      z: 0,
-      size: this.props.centerSize,
-      color: 'red',
-      speed: { x: 0, y: 0, z: 0 },
-      travel: []
-    });
+    if (!this.props.disableCenter) {
+      stars.push({
+        id: '#0',
+        x: 0,
+        y: 0,
+        z: 0,
+        size: this.props.centerSize,
+        color: 'red',
+        speed: { x: 0, y: 0, z: 0 },
+        travel: []
+      });
+    }
+
     const sizeRange = this.props.sizeRange.sort();
     const minSize = sizeRange[0];
     const maxSize = sizeRange[1];
@@ -332,28 +339,57 @@ export default class Index extends React.Component<IProps, IState> {
     }, 100);
   };
 
-  init = () => {
-    const camera = this.camera;
-    // this.scene.background = new THREE.Color('white');
-    // 初始化星体&尾迹
-    this.stars.forEach(starInfo => {
-      // 星体
-      const sphereMaterial = this.props.sandboxMode
+  /**
+   * @param force 是否强制添加光源
+   */
+  createCenterLight = (force: boolean = false) => {
+    // 光源
+    const sphere = new THREE.SphereBufferGeometry(
+      this.props.centerSize,
+      50,
+      50
+    );
+    const light = new THREE.PointLight('#fff', 2, 0, 2); //颜色，强度，光照距离，0表示无限，光衰减
+    const lightObj = new THREE.Mesh(
+      sphere,
+      new THREE.MeshBasicMaterial({ color: 'red' })
+    );
+    light.add(lightObj);
+    light.position.set(0, 0, 0);
+    if ((!this.props.sandboxMode && !this.props.disableCenter) || force) {
+      // 没有中心天体的情况下不需要光源
+      this.scene.add(light);
+    }
+    this.light = light;
+  };
+
+  createStar = (starInfo: StarInfo) => {
+    const sphereMaterial =
+      this.props.sandboxMode || this.props.disableCenter
         ? new THREE.MeshBasicMaterial({
             color: starInfo.color
           })
         : new THREE.MeshLambertMaterial({
             color: starInfo.color
           });
-      const sphere = new THREE.Mesh(
-        new THREE.SphereBufferGeometry(starInfo.size, 50, 50),
-        sphereMaterial
-      );
-      sphere.position.x = starInfo.x;
-      sphere.position.y = starInfo.y;
-      sphere.position.z = starInfo.z;
-      this.spheres[starInfo.id] = sphere;
-      this.scene.add(this.spheres[starInfo.id]);
+    const sphere = new THREE.Mesh(
+      new THREE.SphereBufferGeometry(starInfo.size, 50, 50),
+      sphereMaterial
+    );
+    sphere.position.x = starInfo.x;
+    sphere.position.y = starInfo.y;
+    sphere.position.z = starInfo.z;
+    this.spheres[starInfo.id] = sphere;
+    this.scene.add(this.spheres[starInfo.id]);
+  };
+
+  init = () => {
+    const camera = this.camera;
+    // this.scene.background = new THREE.Color('white');
+    // 初始化星体&尾迹
+    this.stars.forEach(starInfo => {
+      // 星体
+      this.createStar(starInfo);
       // 尾迹
       this.createLine(starInfo);
       if (this.props.showID) {
@@ -363,24 +399,7 @@ export default class Index extends React.Component<IProps, IState> {
     });
 
     // 光源
-    const sphere = new THREE.SphereBufferGeometry(
-      this.props.centerSize,
-      50,
-      50
-    );
-    this.renderer.setClearColor('#000000');
-    const light = new THREE.PointLight('#fff', 2, 0, 2); //颜色，强度，光照距离，0表示无限，光衰减
-    const lightObj = new THREE.Mesh(
-      sphere,
-      new THREE.MeshBasicMaterial({ color: 'red' })
-    );
-
-    light.add(lightObj);
-    light.position.set(this.stars[0].x, this.stars[0].y, this.stars[0].z);
-    if (!this.props.sandboxMode) {
-      this.scene.add(light);
-    }
-
+    this.createCenterLight();
     // renderer
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth - 3, window.innerHeight - 5);
@@ -539,6 +558,44 @@ export default class Index extends React.Component<IProps, IState> {
           this.scene.remove(textSprite);
           delete this.textSprite[key];
         });
+      }
+    }
+
+    if (nextProps.disableCenter !== this.props.disableCenter) {
+      // 实时增删中心天体
+
+      if (nextProps.disableCenter) {
+        this.stars = this.stars.filter(star => star.id !== '#0');
+        this.scene.remove(this.spheres['#0']);
+        if (this.light) {
+          // 删除原有光源
+          this.scene.remove(this.light);
+        }
+        // 添加新的光源
+        const pointLight = new THREE.PointLight('#ffffff');
+        pointLight.position.set(0, 0, 0);
+        //告诉平行光需要开启阴影投射
+        pointLight.castShadow = true;
+        this.scene.add(pointLight);
+        this.light = pointLight;
+      } else {
+        // 删除原有光源
+        if (this.light) {
+          this.scene.remove(this.light);
+        }
+        const centerInfo = {
+          id: '#0',
+          x: 0,
+          y: 0,
+          z: 0,
+          size: this.props.centerSize,
+          color: 'red',
+          speed: { x: 0, y: 0, z: 0 },
+          travel: []
+        };
+        this.createStar(centerInfo);
+        this.stars.push(centerInfo);
+        this.createCenterLight(true);
       }
     }
   }

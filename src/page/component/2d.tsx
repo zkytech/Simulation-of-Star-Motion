@@ -49,6 +49,8 @@ type IProps = {
   sandboxData: SandboxData[];
   /** 步长（步长越小，计算精度越高） */
   step: number;
+  /** 隐藏中心恒星 */
+  disableCenter: boolean;
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -68,7 +70,8 @@ export default class Index extends React.Component<IProps, IState> {
     speedRange: [0, 0.25],
     sandboxMode: false,
     sandboxData: [],
-    step: 1
+    step: 1,
+    disableCenter: false
   };
 
   /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
@@ -100,15 +103,17 @@ export default class Index extends React.Component<IProps, IState> {
     const height = (this.canvas as HTMLCanvasElement).height;
     let stars: StarInfo[] = [];
     // 先加入恒星
-    stars.push({
-      id: '#0',
-      x: width / 2,
-      y: height / 2,
-      size: this.props.centerSize,
-      color: 'red',
-      speed: { x: 0, y: 0 },
-      travel: []
-    });
+    if (!this.props.disableCenter) {
+      stars.push({
+        id: '#0',
+        x: width / 2,
+        y: height / 2,
+        size: this.props.centerSize,
+        color: 'red',
+        speed: { x: 0, y: 0 },
+        travel: []
+      });
+    }
     const sizeRange = this.props.sizeRange.sort();
     const minSize = sizeRange[0];
     const maxSize = sizeRange[1];
@@ -313,8 +318,27 @@ export default class Index extends React.Component<IProps, IState> {
   componentWillReceiveProps(nextProps: IProps) {
     if (nextProps.playSpeed !== this.props.playSpeed) {
       // 实时控制播放速度
-      console.log('速度改变', nextProps.playSpeed);
       this.start(false, nextProps.playSpeed);
+    }
+    if (nextProps.disableCenter !== this.props.disableCenter) {
+      // 实时增删中心天体
+      let { stars } = this.state;
+      if (nextProps.disableCenter) {
+        this.setState({
+          stars: stars.filter(star => star.id !== '#0')
+        });
+      } else {
+        stars.push({
+          id: '#0',
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+          size: this.props.centerSize,
+          color: 'red',
+          speed: { x: 0, y: 0 },
+          travel: []
+        });
+        this.setState({ stars });
+      }
     }
   }
 
