@@ -1,37 +1,81 @@
 import React, { FunctionComponent, useState } from 'react';
-import Canvas from './canvas';
-import { InputNumber, Button, Switch, Slider, Tooltip, Icon } from 'antd';
+import Canvas2D from './2d';
+import { InputNumber, Button, Switch, Slider, Tooltip } from 'antd';
 import style from './style.module.less';
+import Canvas3D from './3d';
+
 const Index: FunctionComponent = () => {
-  const [starNum, setStarNum] = useState(500);
-  const [tarvelLength, setTravelLength] = useState(300);
-  const [centerSize, setCenterSize] = useState(15);
-  const [ref, setRef] = useState<Canvas>();
-  const [g, setG] = useState(30);
-  const [showId, setShowId] = useState(true);
-  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 2]);
-  const [mergeMode, setMergeMode] = useState(false);
-  const [playSpeed, setPlaySpeed] = useState(1);
-  const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]);
-  const [paused, setPaused] = useState(false);
+  const [starNum, setStarNum] = useState(500); // 初始星体数
+  const [tarvelLength, setTravelLength] = useState(300); // 尾迹长度（支持实时调整）
+  const [centerSize, setCenterSize] = useState(15); // 中心星体大小
+  const [ref, setRef] = useState<Canvas3D | Canvas2D>(); // ref
+  const [g, setG] = useState(30); // 引力常量
+  const [showId, setShowId] = useState(true); // 是否显示id
+  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 2]); // 星体大小范围
+  const [mergeMode, setMergeMode] = useState(false); // 吞噬模式
+  const [playSpeed, setPlaySpeed] = useState(1); // 播放速度（支持程度与客户端电脑算力相关）
+  const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]); // 星体初始速度范围
+  const [paused, setPaused] = useState(false); // 暂停状态
+  const [mode, setMode] = useState('2d'); // 模式 '2d'|'3d'
   return (
     <div>
-      <Canvas
-        centerSize={centerSize}
-        travelLength={tarvelLength}
-        initialNum={starNum}
-        canvasRef={canvas => setRef(canvas)}
-        g={g}
-        showID={showId}
-        sizeRange={sizeRange}
-        mergeMode={mergeMode}
-        playSpeed={playSpeed}
-        speedRange={speedRange}
-      />
+      {mode === '2d' ? (
+        <Canvas2D
+          centerSize={centerSize}
+          travelLength={tarvelLength}
+          initialNum={starNum}
+          canvasRef={canvas => {
+            //@ts-ignore
+            setRef(canvas);
+          }}
+          g={g}
+          showID={showId}
+          sizeRange={sizeRange}
+          mergeMode={mergeMode}
+          playSpeed={playSpeed}
+          speedRange={speedRange}
+        />
+      ) : (
+        <Canvas3D
+          centerSize={centerSize}
+          travelLength={tarvelLength}
+          initialNum={starNum}
+          canvasRef={canvas => {
+            //@ts-ignore
+            setRef(canvas);
+          }}
+          g={g}
+          showID={showId}
+          sizeRange={sizeRange}
+          mergeMode={mergeMode}
+          playSpeed={playSpeed}
+          speedRange={speedRange}
+        />
+      )}
       <div className={style.control_panel}>
         <ul style={{ listStyle: 'none' }}>
           <li>
-            <span className={style.input_prefix}>初始星球数量</span>
+            <span>3D模式</span>
+            <Switch
+              checked={mode === '3d'}
+              onChange={checked => {
+                setMode(checked ? '3d' : '2d');
+                if (checked) {
+                  setStarNum(100);
+                  setG(300);
+                  setTravelLength(100);
+                  setShowId(false);
+                } else {
+                  setStarNum(500);
+                  setG(30);
+                  setTravelLength(300);
+                  setShowId(true);
+                }
+              }}
+            />
+          </li>
+          <li>
+            <span className={style.input_prefix}>初始星体数量</span>
             <InputNumber
               value={starNum}
               onChange={value => setStarNum(value as number)}
@@ -116,10 +160,12 @@ const Index: FunctionComponent = () => {
             <Button
               onClick={() => {
                 if (!paused) {
-                  (ref as Canvas).pause();
+                  //@ts-ignore
+                  ref.pause();
                   setPaused(true);
                 } else {
-                  (ref as Canvas).start(false);
+                  //@ts-ignore
+                  ref.start(false);
                   setPaused(false);
                 }
               }}
@@ -127,7 +173,14 @@ const Index: FunctionComponent = () => {
             >
               {paused ? '开始' : '暂停'}
             </Button>
-            <Button onClick={() => (ref as Canvas).start()} type={'primary'}>
+            <Button
+              onClick={() => {
+                //@ts-ignore
+                ref.start(true);
+                setPaused(false);
+              }}
+              type={'primary'}
+            >
               重新开始
             </Button>
           </li>

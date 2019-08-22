@@ -1,16 +1,7 @@
 import * as React from 'react';
 import style from './style.module.less';
 import { Button } from 'antd';
-/**
- * 生成随机RGB颜色
- */
-const randomRGB = () => {
-  const r = Math.floor(Math.random() * 256);
-  const g = Math.floor(Math.random() * 256);
-  const b = Math.floor(Math.random() * 256);
-  const rgb = 'RGB(' + r + ',' + g + ',' + b + ')';
-  return rgb;
-};
+import { randomRGB } from './utils';
 
 type StarInfo = {
   id: string;
@@ -81,7 +72,7 @@ export default class Index extends React.Component<IProps, IState> {
   moving: boolean = false;
   mousePosition: { x: number; y: number } = { x: 0, y: 0 };
 
-  /** 获取初始恒星 */
+  /** 获取初始星体列表 */
   initStars = (total: number) => {
     const width = (this.canvas as HTMLCanvasElement).width;
     const height = (this.canvas as HTMLCanvasElement).height;
@@ -301,6 +292,12 @@ export default class Index extends React.Component<IProps, IState> {
       console.log('速度改变', nextProps.playSpeed);
       this.start(false, nextProps.playSpeed);
     }
+  }
+
+  componentWillUnmount() {
+    // 退出时清除循环任务
+    console.log('unmount 2d');
+    clearInterval(this.mainProcess);
   }
 
   // /** 窗口坐标系转画布坐标系 */
