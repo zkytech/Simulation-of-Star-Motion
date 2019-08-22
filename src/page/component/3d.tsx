@@ -1,10 +1,11 @@
+/** 3D模型 */
 import * as React from 'react';
 import * as THREE from 'three';
 // @ts-ignore
 import { TrackballControls } from './controls/TrackballControls';
 
 import { randomColor, makeTextSprite } from './utils';
-
+import style from '../style.module.less';
 type StarInfo = {
   id: string;
   /** 坐标 */
@@ -20,7 +21,6 @@ type StarInfo = {
   /** 尾迹 */
   travel: Vector3[];
 };
-type Vector3 = { x: number; y: number; z: number };
 
 type IState = {};
 type IProps = {
@@ -43,6 +43,10 @@ type IProps = {
   playSpeed: number;
   /** 速度范围 */
   speedRange: [number, number];
+  /** 是否沙盒模式 */
+  sandboxMode: boolean;
+  /** 沙盒数据 */
+  sandboxData: SandboxData[];
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -82,6 +86,20 @@ export default class Index extends React.Component<IProps, IState> {
 
   /** 获取初始星体列表 */
   initStars = (total: number) => {
+    if (this.props.sandboxMode) {
+      this.stars = this.props.sandboxData.map((data, index) => ({
+        id: `#${index + 1}`,
+        x: data.position.x,
+        y: data.position.y,
+        z: data.position.z,
+        size: data.size,
+        color: data.color,
+        speed: JSON.parse(JSON.stringify(data.speed)),
+        travel: [JSON.parse(JSON.stringify(data.position))]
+      }));
+      return;
+    }
+
     const width = window.innerWidth;
     const height = window.innerHeight;
     let stars: StarInfo[] = [];
@@ -175,8 +193,10 @@ export default class Index extends React.Component<IProps, IState> {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
             if (this.props.mergeMode) star1.size = totalSize;
-            star1.speed = speed;
-            changeList[star1.id] = star1;
+            if (star1.id !== '#0') {
+              star1.speed = speed;
+              changeList[star1.id] = star1;
+            }
             deleteId = star2.id;
           } else {
             deleteIndex.push(index1);
@@ -303,6 +323,8 @@ export default class Index extends React.Component<IProps, IState> {
           this.stars[index] = nextStarInfo;
           this.drawLines(nextStarInfo);
         });
+        // 强制更新是为了刷新左侧面板的数据
+        this.forceUpdate();
       }, 20 / this.props.playSpeed);
     }, 100);
   };
@@ -313,9 +335,13 @@ export default class Index extends React.Component<IProps, IState> {
     // 初始化星体&尾迹
     this.stars.forEach(starInfo => {
       // 星体
-      const sphereMaterial = new THREE.MeshLambertMaterial({
-        color: starInfo.color
-      });
+      const sphereMaterial = this.props.sandboxMode
+        ? new THREE.MeshBasicMaterial({
+            color: starInfo.color
+          })
+        : new THREE.MeshLambertMaterial({
+            color: starInfo.color
+          });
       const sphere = new THREE.Mesh(
         new THREE.SphereBufferGeometry(starInfo.size, 50, 50),
         sphereMaterial
@@ -348,14 +374,16 @@ export default class Index extends React.Component<IProps, IState> {
 
     light.add(lightObj);
     light.position.set(this.stars[0].x, this.stars[0].y, this.stars[0].z);
-    this.scene.add(light);
+    if (!this.props.sandboxMode) {
+      this.scene.add(light);
+    }
 
     // renderer
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth - 3, window.innerHeight - 5);
     //@ts-ignore
     this.refs.container.appendChild(this.renderer.domElement);
-
+    // TODO:沙盒模式控制器应该修改为flyControls
     // 控制器，用于控制视角
     //@ts-ignore
     this.controls = new TrackballControls(camera, this.renderer.domElement);
@@ -403,6 +431,7 @@ export default class Index extends React.Component<IProps, IState> {
     });
     const geometry = new THREE.Geometry();
     if (!point1 || !point2) {
+      // 没有指定point就作为初始化数据处理
       geometry.vertices.push(
         new THREE.Vector3(starInfo.x, starInfo.y, starInfo.z)
       );
@@ -515,6 +544,20 @@ export default class Index extends React.Component<IProps, IState> {
     return (
       <div>
         <div ref={'container'} />
+        <ul className={style.info_panel}>
+          {this.stars.slice(0, 20).map(value => {
+            return (
+              <li key={value.id}>
+                <span style={{ color: value.color }}>{value.id}</span>
+                <span className={style.speed_info}>
+                  speed_x:{value.speed.x.toFixed(3)}&emsp;speed_y:
+                  {value.speed.y.toFixed(3)}&emsp;speed_z:
+                  {value.speed.z.toFixed(3)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     );
   }

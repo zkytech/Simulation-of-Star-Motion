@@ -51,7 +51,7 @@
 }
 
 .info_panel>li {
-  height: 60px;
+  height: 65px;
   border: solid;
   border-width: 1px;
   width: 100%;
@@ -81,4 +81,27 @@
 
 .reset_button:hover {
   opacity: 1;
+}
+
+.add_data_row {
+  padding-top: 10px;
+  text-align: center;
+}
+
+.dynamic-delete-button {
+  cursor: pointer;
+  position: relative;
+  top: 4px;
+  font-size: 24px;
+  color: #999;
+  transition: all 0.3s;
+}
+
+.dynamic-delete-button:hover {
+  color: #777;
+}
+
+.dynamic-delete-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

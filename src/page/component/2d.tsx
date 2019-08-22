@@ -1,5 +1,6 @@
+/** 2D模型 */
 import * as React from 'react';
-import style from './style.module.less';
+import style from '../style.module.less';
 import { Button } from 'antd';
 import { randomRGB } from './utils';
 
@@ -42,6 +43,10 @@ type IProps = {
   playSpeed: number;
   /** 速度范围 */
   speedRange: [number, number];
+  /** 是否沙盒模式 */
+  sandboxMode: boolean;
+  /** 沙盒数据 */
+  sandboxData: SandboxData[];
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -58,7 +63,9 @@ export default class Index extends React.Component<IProps, IState> {
     sizeRange: [2, 5],
     mergeMode: false,
     playSpeed: 1,
-    speedRange: [0, 0.25]
+    speedRange: [0, 0.25],
+    sandboxMode: false,
+    sandboxData: []
   };
 
   /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
@@ -74,6 +81,18 @@ export default class Index extends React.Component<IProps, IState> {
 
   /** 获取初始星体列表 */
   initStars = (total: number) => {
+    if (this.props.sandboxMode) {
+      return this.props.sandboxData.map((data, index) => ({
+        id: `#${index + 1}`, // 由于#0是不会移动的，所以沙盒数据不能使用#0作为id
+        x: data.position.x,
+        y: data.position.y,
+        size: data.size,
+        color: data.color,
+        speed: JSON.parse(JSON.stringify(data.speed)),
+        travel: [JSON.parse(JSON.stringify(data.position))]
+      }));
+    }
+
     const width = (this.canvas as HTMLCanvasElement).width;
     const height = (this.canvas as HTMLCanvasElement).height;
     let stars: StarInfo[] = [];
@@ -250,8 +269,10 @@ export default class Index extends React.Component<IProps, IState> {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
             if (this.props.mergeMode) star1.size = totalSize;
-            star1.speed = speed;
-            changeList[star1.id] = star1;
+            if (star1.id !== '#0') {
+              star1.speed = speed;
+              changeList[star1.id] = star1;
+            }
           } else {
             deleteIndex.push(index1);
             if (this.props.mergeMode) star2.size = totalSize;
@@ -366,7 +387,7 @@ export default class Index extends React.Component<IProps, IState> {
           style={{ backgroundColor: 'black' }}
         />
         <ul className={style.info_panel}>
-          {this.state.stars.slice(1, 21).map(value => {
+          {this.state.stars.slice(0, 20).map(value => {
             return (
               <li key={value.id}>
                 <span style={{ color: value.color }}>{value.id}</span>

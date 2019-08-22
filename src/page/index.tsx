@@ -1,8 +1,9 @@
 import React, { FunctionComponent, useState } from 'react';
-import Canvas2D from './2d';
-import { InputNumber, Button, Switch, Slider, Tooltip } from 'antd';
+import Canvas2D from './component/2d';
+import { InputNumber, Button, Switch, Slider, Tooltip, Modal } from 'antd';
 import style from './style.module.less';
-import Canvas3D from './3d';
+import Canvas3D from './component/3d';
+import AddStar from './component/addStar';
 
 const Index: FunctionComponent = () => {
   const [starNum, setStarNum] = useState(500); // 初始星体数
@@ -16,7 +17,10 @@ const Index: FunctionComponent = () => {
   const [playSpeed, setPlaySpeed] = useState(1); // 播放速度（支持程度与客户端电脑算力相关）
   const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]); // 星体初始速度范围
   const [paused, setPaused] = useState(false); // 暂停状态
-  const [mode, setMode] = useState('2d'); // 模式 '2d'|'3d'
+  const [mode, setMode] = useState<'2d' | '3d'>('2d'); // 模式 '2d'|'3d'
+  const [modalVisble, setModalVisble] = useState(false); // 模态框可视状态
+  const [sandboxMode, setSandboxMode] = useState(false); // 沙盒模式
+  const [sandboxData, setSandboxData] = useState<SandboxData[]>([]); // 沙盒数据
   return (
     <div>
       {mode === '2d' ? (
@@ -34,6 +38,8 @@ const Index: FunctionComponent = () => {
           mergeMode={mergeMode}
           playSpeed={playSpeed}
           speedRange={speedRange}
+          sandboxData={sandboxData}
+          sandboxMode={sandboxMode}
         />
       ) : (
         <Canvas3D
@@ -50,6 +56,8 @@ const Index: FunctionComponent = () => {
           mergeMode={mergeMode}
           playSpeed={playSpeed}
           speedRange={speedRange}
+          sandboxMode={sandboxMode}
+          sandboxData={sandboxData}
         />
       )}
       <div className={style.control_panel}>
@@ -184,8 +192,62 @@ const Index: FunctionComponent = () => {
               重新开始
             </Button>
           </li>
+          <li>
+            <Button
+              onClick={() => {
+                //@ts-ignore
+                ref.pause();
+                setPaused(true);
+                setModalVisble(true);
+              }}
+              type={'primary'}
+              style={{ marginRight: '10px' }}
+            >
+              沙盒
+            </Button>
+            {sandboxMode ? (
+              <Button
+                onClick={() => {
+                  setSandboxMode(false);
+                  setTimeout(() => {
+                    //@ts-ignore
+                    ref.start();
+                  }, 100);
+                }}
+              >
+                退出沙盒
+              </Button>
+            ) : (
+              ''
+            )}
+          </li>
         </ul>
       </div>
+      <Modal
+        visible={modalVisble}
+        onCancel={() => {
+          setModalVisble(false);
+          // 取消时清除暂停状态
+          setPaused(false);
+          //@ts-ignore
+          ref.start(false);
+        }}
+        width={1200}
+        footer={null}
+      >
+        <AddStar
+          mode={mode}
+          onSubmit={data => {
+            setModalVisble(false);
+            setSandboxMode(true);
+            setSandboxData(data);
+            setTimeout(() => {
+              // @ts-ignore
+              ref.start(true);
+            }, 100);
+          }}
+        />
+      </Modal>
     </div>
   );
 };
