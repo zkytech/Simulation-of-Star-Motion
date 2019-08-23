@@ -1,9 +1,20 @@
 import React, { FunctionComponent, useState } from 'react';
-import Canvas2D from './component/2d';
-import { InputNumber, Button, Switch, Slider, Tooltip, Modal } from 'antd';
+import {
+  InputNumber,
+  Button,
+  Switch,
+  Slider,
+  Tooltip,
+  Modal,
+  Collapse
+} from 'antd';
 import style from './style.module.less';
 import Canvas3D from './component/3d';
+import Canvas2D from './component/2d';
+// import Canvas2D from './component/temp';
 import AddStar from './component/addStar';
+
+const { Panel } = Collapse;
 
 const Index: FunctionComponent = () => {
   const [starNum, setStarNum] = useState(500); // 初始星体数
@@ -27,7 +38,7 @@ const Index: FunctionComponent = () => {
   const getcontrolPanel = (className?: string) => {
     return (
       <div className={className}>
-        <ul style={{ listStyle: 'none' }}>
+        <ul className={style.option_list}>
           <li>
             <span>3D模式</span>
             <Switch
@@ -52,12 +63,30 @@ const Index: FunctionComponent = () => {
             />
           </li>
           <li>
+            <Tooltip title="吞噬模式下，星体之间碰撞后将会生成一个更大的星体，其产生的引力也会随之增大">
+              <span>吞噬模式</span>
+            </Tooltip>
+
+            <Switch
+              checked={mergeMode}
+              onChange={checked => setMergeMode(checked)}
+            />
+          </li>
+          <li>
+            <span>中心天体</span>
+            <Switch
+              checked={!disableCenter}
+              onChange={checked => setDisableCenter(!checked)}
+            />
+          </li>
+          <li>
             <span className={style.input_prefix}>初始星体数量</span>
             <InputNumber
               value={starNum}
               onChange={value => setStarNum(value as number)}
             />
           </li>
+
           <li>
             <span>尾迹长度</span>
             <InputNumber
@@ -76,83 +105,77 @@ const Index: FunctionComponent = () => {
             <span>引力大小</span>
             <InputNumber value={g} onChange={value => setG(value as number)} />
           </li>
-          <li>
-            <span style={{ width: '100%' }}>普通星体大小范围</span>
-            <Slider
-              min={1}
-              max={10}
-              value={sizeRange}
-              range
-              onChange={value => {
-                setSizeRange(value as [number, number]);
-              }}
-              marks={{ 1: 1, 5: 5, 10: 10 }}
-            />
-          </li>
-          <li>
-            <span style={{ width: '100%' }}>普通星体速度范围</span>
-            <Slider
-              min={0}
-              max={10}
-              step={0.1}
-              value={speedRange}
-              range
-              onChange={value => {
-                setSpeedRange(value as [number, number]);
-              }}
-              marks={{ 1: 1, 5: 5, 10: 10 }}
-            />
-          </li>
-          <li>
-            <Tooltip title="数值越小精度越高">
-              <span style={{ width: '100%' }}>计算精度</span>
-            </Tooltip>
-            <Slider
-              min={0.1}
-              max={1}
-              step={0.1}
-              value={step}
-              onChange={value => setStep(value as number)}
-              marks={{ 0.1: 0.1, 0.5: 0.5, 1: 1 }}
-            />
-          </li>
-          <li>
-            <Tooltip title="播放速度调整是通过加快运算节奏来实现的，这与计算机算力挂钩，当算力不足时，调整播放速度是无效的。此时可以通过减小尾迹长度或初始星体数量来减少运算量。">
-              <span style={{ width: '100%' }}>播放速度</span>
-            </Tooltip>
-            <Slider
-              min={0.1}
-              max={5}
-              value={playSpeed}
-              onChange={value => {
-                //@ts-ignore
-                setPlaySpeed(value);
-              }}
-              step={0.1}
-              marks={{ 0.1: '0.1', 0.5: '0.5', 1: '1', 2: '2', 5: '5' }}
-            />
-          </li>
-          <li>
-            <Tooltip title="吞噬模式下，星体之间碰撞后将会生成一个更大的星体，其产生的引力也会随之增大">
-              <span>吞噬模式</span>
-            </Tooltip>
-
-            <Switch
-              checked={mergeMode}
-              onChange={checked => setMergeMode(checked)}
-            />
-          </li>
-          <li>
-            <span>中心天体</span>
-            <Switch
-              checked={!disableCenter}
-              onChange={checked => setDisableCenter(!checked)}
-            />
-          </li>
-          <li>
-            <span>显示ID</span>
-            <Switch checked={showId} onChange={checked => setShowId(checked)} />
-          </li>
+        </ul>
+        <Collapse>
+          <Panel header={'高级选项'} key={1}>
+            <ul className={style.option_list}>
+              <li>
+                <span style={{ width: '100%' }}>普通星体大小范围</span>
+                <Slider
+                  min={1}
+                  max={10}
+                  value={sizeRange}
+                  range
+                  onChange={value => {
+                    setSizeRange(value as [number, number]);
+                  }}
+                  marks={{ 1: 1, 5: 5, 10: 10 }}
+                />
+              </li>
+              <li>
+                <span style={{ width: '100%' }}>普通星体速度范围</span>
+                <Slider
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  value={speedRange}
+                  range
+                  onChange={value => {
+                    setSpeedRange(value as [number, number]);
+                  }}
+                  marks={{ 1: 1, 5: 5, 10: 10 }}
+                />
+              </li>
+              <li>
+                <Tooltip title="数值越小精度越高">
+                  <span style={{ width: '100%' }}>计算精度</span>
+                </Tooltip>
+                <Slider
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={step}
+                  onChange={value => setStep(value as number)}
+                  marks={{ 0.1: 0.1, 0.5: 0.5, 1: 1 }}
+                />
+              </li>
+              <li>
+                <Tooltip title="播放速度调整是通过加快运算节奏来实现的，这与计算机算力挂钩，当算力不足时，调整播放速度是无效的。此时可以通过减小尾迹长度或初始星体数量来减少运算量。">
+                  <span style={{ width: '100%' }}>播放速度</span>
+                </Tooltip>
+                <Slider
+                  min={0.1}
+                  max={5}
+                  value={playSpeed}
+                  onChange={value => {
+                    //@ts-ignore
+                    setPlaySpeed(value);
+                  }}
+                  step={0.1}
+                  marks={{ 0.1: '0.1', 1: '1', 2: '2', 5: '5' }}
+                />
+              </li>
+              <li>
+                <span>显示ID</span>
+                <Switch
+                  checked={showId}
+                  onChange={checked => setShowId(checked)}
+                />
+              </li>
+            </ul>
+          </Panel>
+        </Collapse>
+        <ul className={style.option_list}>
           <li>
             <Button
               onClick={() => {
@@ -292,6 +315,7 @@ const Index: FunctionComponent = () => {
             setModalVisble(false);
             setSandboxMode(true);
             setSandboxData(data);
+            setPaused(false);
             setTimeout(() => {
               // @ts-ignore
               ref.start(true);

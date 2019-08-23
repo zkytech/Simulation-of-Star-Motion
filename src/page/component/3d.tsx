@@ -521,6 +521,7 @@ export default class Index extends React.Component<IProps, IState> {
   }
 
   componentWillUnmount() {
+    this.renderer.forceContextLoss();
     cancelAnimationFrame(this.animateFrame);
     clearInterval(this.mainProcess);
     window.removeEventListener('resize', this.onWindowResize, false);

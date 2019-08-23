@@ -168,3 +168,7 @@ export const saveAsJson = (data: any, fileName: string) => {
   const blob = new Blob([JSON.stringify(data)], { type: '' });
   saveAs(blob, fileName);
 };
+
+export const deepCopy = (target: any) => {
+  return JSON.parse(JSON.stringify(target));
+};

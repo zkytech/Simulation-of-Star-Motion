@@ -8,8 +8,7 @@
   box-shadow: 0 0 5px rgba(255, 255, 255, 1);
   border-radius: 5px;
   transition-duration: 0.8s;
-  padding: 10px;
-  z-index: 20;
+  padding: 0;
 }
 
 .control_panel:hover {
@@ -17,23 +16,22 @@
   transition-duration: 0.8s
 }
 
-.control_panel>ul,
-.control_panel_phone>ul {
+.option_list {
   list-style: none;
   padding-left: 10px;
 }
 
-.control_panel>ul>li,
-.control_panel_phone>ul>li {
-  line-height: 50px;
+.option_list>li {
+  line-height: 39px;
 }
 
-.control_panel>ul>li>span,
-.control_panel_phone>ul>li>span {
+.option_list>li>span {
   display: inline-block;
   width: 100px;
   cursor: default;
 }
+
+
 
 
 .info_panel {
@@ -84,6 +82,14 @@
 
 .reset_button:hover {
   opacity: 1;
+}
+
+.status_button {
+  position: fixed;
+  bottom: 20px;
+  left: 2px;
+  opacity: 0.2;
+  color: white
 }
 
 .add_data_row {

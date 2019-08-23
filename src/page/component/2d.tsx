@@ -2,26 +2,13 @@
 import * as React from 'react';
 import style from '../style.module.less';
 import { Button } from 'antd';
-import { randomRGB } from './utils';
+import { deepCopy } from './utils';
 import Hammer from 'hammerjs';
-type StarInfo = {
-  id: string;
-  /** 坐标 */
-  x: number;
-  y: number;
-  /** 颜色 */
-  color: string;
-  /** 大小 */
-  size: number;
-  /** 速度 */
-  speed: { x: number; y: number };
-  /** 尾迹 */
-  travel: { x: number; y: number }[];
-};
+import { Star2D } from './star';
 
-type IState = {
-  stars: StarInfo[];
-};
+type DoubleCord = { canvas: Vector2; screen: Vector2 }; // 画布坐标系，窗口坐标系
+
+type IState = {};
 
 type IProps = {
   /** 尾迹长度 */
@@ -35,7 +22,7 @@ type IProps = {
   g: number;
   /** 是否显示ID */
   showID: boolean;
-  /** 星体最大大小 */
+  /** 星体大小范围 */
   sizeRange: [number, number];
   /** 吞噬模式 */
   mergeMode: boolean;
@@ -54,10 +41,6 @@ type IProps = {
 };
 
 export default class Index extends React.Component<IProps, IState> {
-  readonly state: IState = {
-    stars: []
-  };
-
   public static defaultProps: Partial<IProps> = {
     travelLength: 300,
     initialNum: 200,
@@ -76,71 +59,182 @@ export default class Index extends React.Component<IProps, IState> {
 
   /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
   canvas: HTMLCanvasElement | null = null;
-  ctx2d: CanvasRenderingContext2D | null = null;
+  ctx: CanvasRenderingContext2D | null = null;
   mainProcess: any;
-  g: { [key: string]: { x: number; y: number } } = {};
-  scale: number = 1;
-  centerPointOffset: { x: number; y: number } = { x: 0, y: 0 };
-  centerPoint: { x: number; y: number } = { x: 0, y: 0 };
-  moving: boolean = false;
-  mousePosition: { x: number; y: number } = { x: 0, y: 0 };
+  forceDict: ForceDict2D = {}; // 星体受力字典
+  stars: Star2D[] = [];
+  focousedStar: Star2D | null = null;
 
-  /** 获取初始星体列表 */
-  initStars = (total: number) => {
-    if (this.props.sandboxMode) {
-      return this.props.sandboxData.map((data, index) => ({
-        id: `#${index + 1}`, // 由于#0是不会移动的，所以沙盒数据不能使用#0作为id
-        x: data.position.x,
-        y: data.position.y,
-        size: data.size,
-        color: data.color,
-        speed: JSON.parse(JSON.stringify(data.speed)),
-        travel: [JSON.parse(JSON.stringify(data.position))]
-      }));
+  // 画布缩放拖动控制参数
+  scale: number = 1;
+  origin: DoubleCord = {
+    //坐标原点
+    canvas: { x: 0, y: 0 },
+    screen: { x: 0, y: 0 }
+  };
+  mouse: DoubleCord & { button: number } = {
+    //鼠标位置
+    canvas: { x: 0, y: 0 },
+    screen: { x: 0, y: 0 },
+    button: 0
+  };
+  prevScale = 1;
+
+  /** 缩放长度 */
+  zoomed = (value: number) => {
+    return value * this.scale;
+  };
+  /** 画布坐标X转换为缩放后的窗口坐标 */
+  zoomedX = (x: number) => {
+    return (x - this.origin.canvas.x) * this.scale + this.origin.screen.x;
+  };
+  /** 画布坐标Y转换为缩放后的窗口坐标 */
+  zoomedY = (y: number) => {
+    return (y - this.origin.canvas.y) * this.scale + this.origin.screen.y;
+  };
+
+  /** 鼠标坐标转换（屏幕坐标->画布坐标） */
+  zoomedX_INV = (x: number) => {
+    return Math.floor(
+      (x - this.origin.screen.x) / this.scale + this.origin.canvas.x
+    );
+  };
+  /** 鼠标坐标转换（屏幕坐标->画布坐标） */
+  zoomedY_INV = (y: number) => {
+    return Math.floor(
+      (y - this.origin.screen.y) / this.scale + this.origin.canvas.y
+    );
+  };
+
+  /** 鼠标拖动 */
+  move = (event: MouseEvent) => {
+    // 鼠标事件
+    if (event.type === 'mousedown') {
+      this.mouse.button = 1;
+    } else if (event.type === 'mouseup' || event.type === 'mouseout') {
+      this.mouse.button = 0;
     }
 
+    this.mouse.screen.x = event.clientX;
+    this.mouse.screen.y = event.clientY;
+    // 获得上次鼠标在画布中的位置
+    const xx = this.mouse.canvas.x;
+    const yy = this.mouse.canvas.y;
+
+    // 计算鼠标在画布中的位置
+    this.mouse.canvas.x = this.zoomedX_INV(this.mouse.screen.x);
+    this.mouse.canvas.y = this.zoomedY_INV(this.mouse.screen.y);
+    if (this.mouse.button === 1) {
+      // 鼠标点击
+      // 移动画布缩放原点
+      this.origin.canvas.x -= this.mouse.canvas.x - xx;
+      this.origin.canvas.y -= this.mouse.canvas.y - yy;
+      // 重新计算鼠标在画布中的位置
+      this.mouse.canvas.x = this.zoomedX_INV(this.mouse.screen.x);
+      this.mouse.canvas.y = this.zoomedY_INV(this.mouse.screen.y);
+    }
+  };
+
+  /** 鼠标缩放 */
+  trackWheel = (event: MouseWheelEvent | SimulateMouseEvent) => {
+    const mouse = this.mouse;
+    const origin = this.origin;
+    // @ts-ignore
+
+    // @ts-ignore
+    if (event.isMobile) {
+      const e = event as SimulateMouseEvent;
+      mouse.screen.x = e.center.x;
+      mouse.screen.y = e.center.y;
+      mouse.canvas.x = this.zoomedX_INV(e.center.x);
+      mouse.canvas.y = this.zoomedY_INV(e.center.y);
+      this.scale = this.prevScale * e.scale;
+    } else {
+      // 阻止页面滚动
+      const e = event as MouseWheelEvent;
+      e.preventDefault();
+      // 判断滚动方向进行缩放
+      if (e.deltaY < 0) {
+        this.scale = this.scale * 1.1;
+      } else {
+        this.scale = this.scale * (1 / 1.1);
+      }
+    }
+
+    // 设置缩放原点
+
+    origin.canvas.x = mouse.canvas.x;
+    origin.canvas.y = mouse.canvas.y;
+    origin.screen.x = mouse.screen.x;
+    origin.screen.y = mouse.screen.y;
+    mouse.canvas.x = this.zoomedX_INV(mouse.screen.x); // recalc mouse world (real) pos
+    mouse.canvas.y = this.zoomedY_INV(mouse.screen.y);
+  };
+  /** 锁定窗口位置 */
+  focusOn = (target?: Vector2) => {
+    if (!target) {
+      // @ts-ignore
+      target = this.focousedStar.position;
+    }
+    this.origin.canvas.x = target.x;
+    this.origin.canvas.y = target.y;
+    this.origin.screen.x = window.innerWidth / 2;
+    this.origin.screen.y = window.innerHeight / 2;
+  };
+
+  /** 设置中心天体 */
+  addCenterStar = () => {
     const width = (this.canvas as HTMLCanvasElement).width;
     const height = (this.canvas as HTMLCanvasElement).height;
-    let stars: StarInfo[] = [];
-    // 先加入恒星
-    if (!this.props.disableCenter) {
-      stars.push({
+    this.stars.push(
+      new Star2D({
         id: '#0',
-        x: width / 2,
-        y: height / 2,
         size: this.props.centerSize,
         color: 'red',
         speed: { x: 0, y: 0 },
-        travel: []
-      });
-    }
-    const sizeRange = this.props.sizeRange.sort();
-    const minSize = sizeRange[0];
-    const maxSize = sizeRange[1];
-    for (let i = 1; i <= total; i++) {
-      const x = Math.ceil(Math.random() * width);
-      const y = Math.ceil(Math.random() * height);
-      const size = Math.ceil(Math.random() * (maxSize - minSize) + minSize);
-      const color = randomRGB();
-      const speedRange = this.props.speedRange.sort();
-      const minSpeed = speedRange[0];
-      const maxSpeed = speedRange[1];
-      const speed = {
-        x:
-          Math.random() *
-          (maxSpeed - minSpeed + minSpeed) *
-          (Math.random() > 0.5 ? 1 : -1),
-        y:
-          Math.random() *
-          (maxSpeed - minSpeed + minSpeed) *
-          (Math.random() > 0.5 ? 1 : -1)
-      };
-      const travel = [{ x, y }];
-      stars.push({ id: `#${i}`, x, y, size, color, speed, travel });
-    }
-
-    return stars;
+        position: { x: width / 2, y: height / 2 }
+      })
+    );
   };
+
+  /** 移除中心天体 */
+  removeCenterStar = () => {
+    this.stars = this.stars.filter(star => star.id !== '#0');
+  };
+
+  /** 初始化星体列表 */
+  initStars = () => {
+    if (this.props.sandboxMode) {
+      /** 沙盒模式仅使用用户提供的数据 */
+      this.stars = this.props.sandboxData.map(
+        (data, index) =>
+          new Star2D({
+            id: `#${index + 1}`, // 由于#0是不会移动的，所以沙盒数据不能使用#0作为id
+            size: data.size,
+            color: data.color,
+            speed: deepCopy(data.speed),
+            position: deepCopy(data.position)
+          })
+      );
+    } else {
+      // 先加入恒星
+      if (!this.props.disableCenter) {
+        this.addCenterStar();
+      }
+      const total = this.props.initialNum;
+      // 随机初始化其它星体
+      for (let i = 1; i <= total; i++) {
+        this.stars.push(
+          Star2D.ofRandom({
+            speedRange: this.props.speedRange,
+            sizeRange: this.props.sizeRange,
+            id: `#${i}`
+          })
+        );
+      }
+    }
+  };
+
   pause = () => {
     if (this.mainProcess) {
       clearInterval(this.mainProcess);
@@ -154,110 +248,63 @@ export default class Index extends React.Component<IProps, IState> {
       clearInterval(this.mainProcess);
     }
     const canvas = this.canvas as HTMLCanvasElement;
-    const ctx2d = this.ctx2d as CanvasRenderingContext2D;
     if (init) {
-      // 初始化数据，设置中心点
-      this.centerPoint = { x: canvas.width / 2, y: canvas.height / 2 };
-      this.setState({
-        stars: this.initStars(this.props.initialNum)
-      });
+      // 初始化数据
+      this.stars = [];
+      this.initStars();
+      this.focousedStar = null;
     }
     this.mainProcess = setInterval(() => {
-      // 重设宽高清空画布
-      canvas.height = document.documentElement.clientHeight - 5;
-      canvas.width = document.body.clientWidth;
-      //
-      ctx2d.translate(
-        this.centerPoint.x * (1 - this.scale) + this.centerPointOffset.x,
-        this.centerPoint.y * (1 - this.scale) + this.centerPointOffset.y
-      );
-      ctx2d.scale(this.scale, this.scale);
+      // 清空画布
+      canvas.height = window.innerHeight - 5;
+      canvas.width = window.innerWidth;
+
+      if (this.focousedStar) {
+        this.focusOn();
+      }
       // 计算引力
       this.calcForce();
-      let { stars } = this.state;
-      stars.forEach((value, index) => {
+      let stars = this.stars;
+
+      stars.forEach((star, index) => {
         // 绘制星体
-        this.drawStar(value);
+        star.draw(
+          this.props.showID,
+          this.props.travelLength,
+          this.ctx as CanvasRenderingContext2D,
+          {
+            zoomed: this.zoomed,
+            zoomedX: this.zoomedX,
+            zoomedY: this.zoomedY
+          }
+        );
         // 如果是中心恒星，不移动
-        if (value.id === '#0') return;
-        // 移动星体
-        stars[index] = this.moveStar(value);
+        if (star.id === '#0') return;
+        // 移动星体到下一个位置
+        star.moveToNext(this.props.step, this.forceDict);
+        stars[index] = star;
       });
-      this.setState({ stars });
-    }, 20 / this.props.playSpeed);
-  };
-
-  /** 绘制尾迹线 */
-  drawLine = (starInfo: StarInfo) => {
-    const ctx2d = this.ctx2d as CanvasRenderingContext2D;
-    let travel = starInfo.travel;
-    ctx2d.beginPath();
-    travel.forEach((value, index) => {
-      if (index === 0) ctx2d.moveTo(value.x, value.y);
-      else ctx2d.lineTo(value.x, value.y);
-    });
-    ctx2d.lineWidth = 2;
-    ctx2d.strokeStyle = starInfo.color;
-    ctx2d.stroke();
-  };
-
-  /** 绘制星体 */
-  drawStar = (starInfo: StarInfo) => {
-    const ctx2d = this.ctx2d as CanvasRenderingContext2D;
-    const { x, y, size, color } = starInfo;
-    ctx2d.beginPath();
-    ctx2d.arc(x, y, size, 0, Math.PI * 2);
-    ctx2d.fillStyle = color;
-    ctx2d.fill();
-    if (this.props.showID) {
-      ctx2d.beginPath();
-      ctx2d.fillStyle = 'white';
-      ctx2d.fillText(starInfo.id, x + 10, y);
-    }
-    this.drawLine(starInfo);
-  };
-  /** 根据速度、加速度获取下一个坐标 */
-  moveStar = (starInfo: StarInfo): StarInfo => {
-    let { x, y, travel } = starInfo;
-    const { travelLength, step } = this.props;
-    travel.push({ x, y });
-    if (travel.length > this.props.travelLength)
-      travel = travelLength > 0 ? travel.slice(-travelLength) : [];
-
-    const f = this.g[starInfo.id];
-    const starG = Math.pow(starInfo.size, 3);
-    // 先计算加速度对速度的影响
-    starInfo.speed.x += (f.x / starG) * step;
-    starInfo.speed.y += (f.y / starG) * step;
-    // 然后将速度直接加到坐标上
-    x += starInfo.speed.x * step;
-    y += starInfo.speed.y * step;
-    return {
-      ...starInfo,
-      x,
-      y,
-      travel
-    };
-    // 计算所有点之间的引力
+      this.forceUpdate();
+    }, 20 / playSpeed);
   };
 
   /** 计算引力、判断撞击 */
   calcForce = () => {
-    const { stars } = this.state;
+    let stars = this.stars;
     let result: any = {};
     stars.forEach(value => {
       result[value.id] = { x: 0, y: 0 };
     });
     let deleteIndex: number[] = [];
-    const changeList: { [key: string]: StarInfo } = {};
+    const changeList: { [key: string]: Star2D } = {};
     stars.forEach((star1, index1) => {
       stars.slice(index1 + 1, stars.length).forEach((star2, index2) => {
-        const xDistance = star1.x - star2.x;
-        const yDistance = star1.y - star2.y;
+        const xDistance = star1.position.x - star2.position.x;
+        const yDistance = star1.position.y - star2.position.y;
         const distance_2 = Math.pow(xDistance, 2) + Math.pow(yDistance, 2);
         const distance = Math.pow(distance_2, 0.5);
-        const star1G = Math.pow(star1.size, 3);
-        const star2G = Math.pow(star2.size, 3);
+        const star1G = star1.mass;
+        const star2G = star2.mass;
         let xF = 0;
         let yF = 0;
         if (distance < star1.size + star2.size) {
@@ -276,14 +323,14 @@ export default class Index extends React.Component<IProps, IState> {
           if (star1.size >= star2.size) {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
-            if (this.props.mergeMode) star1.size = totalSize;
+            if (this.props.mergeMode) star1.setSize = totalSize;
             if (star1.id !== '#0') {
               star1.speed = speed;
               changeList[star1.id] = star1;
             }
           } else {
             deleteIndex.push(index1);
-            if (this.props.mergeMode) star2.size = totalSize;
+            if (this.props.mergeMode) star2.setSize = totalSize;
             star2.speed = speed;
             changeList[star2.id] = star2;
           }
@@ -301,18 +348,17 @@ export default class Index extends React.Component<IProps, IState> {
         result[star2.id].y += yF;
       });
     });
-    this.g = result;
-    this.setState({
-      stars: stars
-        .filter((value, index) => deleteIndex.indexOf(index) === -1)
-        .map(value => {
-          if (changeList[value.id]) {
-            return changeList[value.id];
-          } else {
-            return value;
-          }
-        })
-    });
+    this.forceDict = result;
+
+    this.stars = stars
+      .filter((value, index) => deleteIndex.indexOf(index) === -1)
+      .map(value => {
+        if (changeList[value.id]) {
+          return changeList[value.id];
+        } else {
+          return value;
+        }
+      });
   };
 
   componentWillReceiveProps(nextProps: IProps) {
@@ -322,22 +368,10 @@ export default class Index extends React.Component<IProps, IState> {
     }
     if (nextProps.disableCenter !== this.props.disableCenter) {
       // 实时增删中心天体
-      let { stars } = this.state;
       if (nextProps.disableCenter) {
-        this.setState({
-          stars: stars.filter(star => star.id !== '#0')
-        });
+        this.removeCenterStar();
       } else {
-        stars.push({
-          id: '#0',
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-          size: this.props.centerSize,
-          color: 'red',
-          speed: { x: 0, y: 0 },
-          travel: []
-        });
-        this.setState({ stars });
+        this.addCenterStar();
       }
     }
   }
@@ -348,14 +382,6 @@ export default class Index extends React.Component<IProps, IState> {
     clearInterval(this.mainProcess);
   }
 
-  // /** 窗口坐标系转画布坐标系 */
-  // transCord = (x: number, y: number) => {
-  //   const { centerPoint, scale } = this.state;
-  //   const newX = x / scale - (centerPoint.x * (1 - scale)) / scale;
-  //   const newY = y / scale - (centerPoint.y * (1 - scale)) / scale;
-  //   return { x: newX, y: newY };
-  // };
-
   /** 组件加载完成后进行初始化动作 */
   componentDidMount() {
     if (this.props.canvasRef) {
@@ -363,96 +389,60 @@ export default class Index extends React.Component<IProps, IState> {
     }
     const canvas = this.canvas as HTMLCanvasElement;
     // 监听鼠标滚轮进行缩放
-    canvas.addEventListener('mousewheel', e => {
-      //@ts-ignore
-      if (e.deltaY < 0) {
-        this.zoomIn();
-      } else {
-        this.zoomOut();
-      }
-    });
-    // 移动端缩放处理
+    canvas.addEventListener('wheel', this.trackWheel);
+    canvas.addEventListener('mousemove', this.move);
+    canvas.addEventListener('mousedown', this.move);
+    canvas.addEventListener('mouseup', this.move);
+    canvas.addEventListener('mouseout', this.move);
     const hammer = new Hammer(canvas);
     hammer.get('pinch').set({ enable: true });
     hammer.on('pinchin', e => {
       // 两指相互靠近
-      if (e.distance > 5) {
-        // 排除手指抖动
-        this.zoomOut(true);
-      }
+
+      this.trackWheel({
+        center: e.center as Vector2,
+        scale: e.scale,
+        isMobile: true
+      });
     });
     hammer.on('pinchout', e => {
-      // 两指相互原理
-      if (e.distance > 5) {
-        this.zoomIn(true);
-      }
-    });
-    // 移动端拖动处理
-    canvas.addEventListener('touchstart', e => {
-      this.moving = true;
-      this.mousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    });
-    canvas.addEventListener('touchend', e => {
-      this.moving = false;
-    });
-    canvas.addEventListener('touchmove', e => {
-      if (e.touches.length === 2) {
-      } else {
-        if (this.moving) {
-          const offsetX =
-            e.touches[0].clientX -
-            this.mousePosition.x +
-            this.centerPointOffset.x;
-          const offsetY =
-            e.touches[0].clientY -
-            this.mousePosition.y +
-            this.centerPointOffset.y;
-          this.centerPointOffset = { x: offsetX, y: offsetY };
-          this.mousePosition = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY
-          };
-        }
-      }
-    });
-    // 监听鼠标点击进行拖动
-    canvas.addEventListener('mousedown', e => {
-      this.moving = true;
-      this.mousePosition = { x: e.clientX, y: e.clientY };
-    });
+      // 两指相互远离
 
-    canvas.addEventListener('mouseup', e => {
-      this.moving = false;
+      this.trackWheel({
+        center: e.center as Vector2,
+        scale: e.scale,
+        isMobile: true
+      });
     });
-
-    canvas.addEventListener('mousemove', e => {
-      if (this.moving) {
-        const offsetX =
-          e.clientX - this.mousePosition.x + this.centerPointOffset.x;
-        const offsetY =
-          e.clientY - this.mousePosition.y + this.centerPointOffset.y;
-        this.centerPointOffset = { x: offsetX, y: offsetY };
-        this.mousePosition = { x: e.clientX, y: e.clientY };
-      }
+    hammer.on('pinchend', e => {
+      this.prevScale = this.scale;
+    });
+    hammer.on('panstart', e => {
+      const x = e.pointers[0].clientX;
+      const y = e.pointers[0].clientY;
+      this.mouse.screen.x = x;
+      this.mouse.screen.y = y;
+      this.mouse.canvas.x = this.zoomedX_INV(x);
+      this.mouse.canvas.y = this.zoomedY_INV(y);
+    });
+    hammer.on('panmove', e => {
+      let event = {
+        type: 'mousedown',
+        clientX: e.pointers[0].clientX,
+        clientY: e.pointers[0].clientY
+      };
+      this.move(event as MouseEvent);
     });
 
     // 设置画布宽高
     canvas.height = document.documentElement.clientHeight - 5;
     canvas.width = document.body.clientWidth;
-    this.ctx2d = canvas.getContext('2d');
+    this.ctx = canvas.getContext('2d');
     // 开始绘制
     this.start();
   }
 
-  // 放大
-  zoomIn = (slow: boolean = false) => {
-    this.scale = slow ? this.scale * 1.01 : this.scale * 1.1;
-  };
-  // 缩小
-  zoomOut = (slow: boolean = false) => {
-    this.scale = slow ? this.scale * 0.99 : this.scale * 0.9;
-  };
-
+  hideStatus = true;
   public render() {
     return (
       <div>
@@ -460,28 +450,61 @@ export default class Index extends React.Component<IProps, IState> {
           ref={ref => (this.canvas = ref)}
           style={{ backgroundColor: 'black' }}
         />
-        <ul className={style.info_panel} hidden={window.screen.width < 720}>
-          {this.state.stars.slice(0, 20).map(value => {
-            return (
-              <li key={value.id}>
-                <span style={{ color: value.color }}>{value.id}</span>
-                <span className={style.speed_info}>
-                  speed_x:{value.speed.x.toFixed(3)}&emsp;speed_y:
-                  {value.speed.y.toFixed(3)}
-                </span>
-              </li>
-            );
-          })}
+
+        <ul
+          className={style.info_panel}
+          hidden={window.screen.width < 720 && this.hideStatus}
+        >
+          {this.stars
+            .sort((value1, value2) => value2.size - value1.size)
+            .slice(0, 13)
+            .map(value => {
+              const focoused =
+                this.focousedStar && this.focousedStar.id === value.id;
+              return (
+                <li
+                  key={value.id}
+                  onClick={() => {
+                    if (focoused) {
+                      this.focousedStar = null;
+                    } else {
+                      this.focousedStar = value;
+                    }
+                  }}
+                  style={{
+                    background: focoused ? 'RGBA(255,255,255,0.3)' : undefined
+                  }}
+                >
+                  <span style={{ color: value.color }}>{value.id}</span>
+                  <span className={style.speed_info}>
+                    mass:{value.mass.toFixed(3)}&emsp; speed_x:
+                    {value.speed.x.toFixed(3)}&emsp;speed_y:
+                    {value.speed.y.toFixed(3)}
+                  </span>
+                </li>
+              );
+            })}
         </ul>
         <Button
           onClick={() => {
-            this.centerPointOffset = { x: 0, y: 0 };
             this.scale = 1;
+            this.origin.canvas = { x: 0, y: 0 };
+            this.origin.screen = { x: 0, y: 0 };
           }}
           type={'ghost'}
           className={style.reset_button}
         >
-          视野重置
+          重置视野
+        </Button>
+        <Button
+          onClick={() => {
+            this.hideStatus = !this.hideStatus;
+          }}
+          type={'ghost'}
+          className={style.status_button}
+          hidden={window.screen.width > 720}
+        >
+          {this.hideStatus ? '显示状态信息' : '隐藏状态信息'}
         </Button>
       </div>
     );

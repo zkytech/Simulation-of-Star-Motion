@@ -88,6 +88,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
         <Col span={3} style={borderStyle}>
           X:
           <InputNumber
+            step={0.1}
             value={rowData[i].speed.x}
             onChange={value => {
               rowData[i].speed.x = value as number;
@@ -99,6 +100,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
         <Col span={3}>
           Y:
           <InputNumber
+            step={0.1}
             value={rowData[i].speed.y}
             onChange={value => {
               rowData[i].speed.y = value as number;
@@ -110,6 +112,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
         <Col span={mode === '2d' ? 0 : 3}>
           Z:
           <InputNumber
+            step={0.1}
             value={rowData[i].speed.z}
             onChange={value => {
               rowData[i].speed.z = value as number;
