@@ -283,7 +283,7 @@ const Index: FunctionComponent = () => {
       )}
       {window.screen.width < 720 ? (
         <Button
-          style={{ position: 'fixed', top: '10px', left: '10px' }}
+          style={{ position: 'fixed', top: '10px', right: '10px' }}
           onClick={() => {
             //@ts-ignore
             ref.pause();
