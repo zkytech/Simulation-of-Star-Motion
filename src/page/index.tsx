@@ -11,7 +11,6 @@ import {
 import style from './style.module.less';
 import Canvas3D from './component/3d';
 import Canvas2D from './component/2d';
-// import Canvas2D from './component/temp';
 import AddStar from './component/addStar';
 
 const { Panel } = Collapse;
@@ -51,6 +50,7 @@ const Index: FunctionComponent = () => {
                   setTravelLength(100);
                   setShowId(false);
                   setDisableCenter(false);
+                  setStep(0.5);
                 } else {
                   setStarNum(500);
                   setG(30);
@@ -107,7 +107,7 @@ const Index: FunctionComponent = () => {
           </li>
         </ul>
         <Collapse>
-          <Panel header={'高级选项'} key={1}>
+          <Panel header={'高级选项'} key={0}>
             <ul className={style.option_list}>
               <li>
                 <span style={{ width: '100%' }}>普通星体大小范围</span>
@@ -141,9 +141,9 @@ const Index: FunctionComponent = () => {
                   <span style={{ width: '100%' }}>计算精度</span>
                 </Tooltip>
                 <Slider
-                  min={0.1}
+                  min={0.01}
                   max={1}
-                  step={0.1}
+                  step={0.01}
                   value={step}
                   onChange={value => setStep(value as number)}
                   marks={{ 0.1: 0.1, 0.5: 0.5, 1: 1 }}
@@ -198,6 +198,7 @@ const Index: FunctionComponent = () => {
                 //@ts-ignore
                 ref.start(true);
                 setPaused(false);
+                setPhonePanelVisible(false);
               }}
               type={'primary'}
             >
@@ -306,15 +307,24 @@ const Index: FunctionComponent = () => {
           //@ts-ignore
           ref.start(false);
         }}
+        style={{ width: '1200px!important' }}
         width={1200}
         footer={null}
       >
         <AddStar
+          params={{ g, disableCenter, centerSize, step, mergeMode }}
           mode={mode}
           onSubmit={data => {
             setModalVisble(false);
             setSandboxMode(true);
-            setSandboxData(data);
+            setSandboxData(data.stars);
+            if (data.params) {
+              setCenterSize(data.params.centerSize);
+              setDisableCenter(data.params.disableCenter);
+              setG(data.params.g);
+              setStep(data.params.step);
+              setMergeMode(data.params.mergeMode);
+            }
             setPaused(false);
             setTimeout(() => {
               // @ts-ignore

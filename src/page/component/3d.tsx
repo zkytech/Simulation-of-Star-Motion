@@ -3,24 +3,9 @@ import * as React from 'react';
 import * as THREE from 'three';
 // @ts-ignore
 import { TrackballControls } from './controls/TrackballControls';
-
 import { randomColor, makeTextSprite } from './utils';
 import style from '../style.module.less';
-type StarInfo = {
-  id: string;
-  /** 坐标 */
-  x: number;
-  y: number;
-  z: number;
-  /** 颜色 */
-  color: string;
-  /** 大小 */
-  size: number;
-  /** 速度 */
-  speed: Vector3;
-  /** 尾迹 */
-  travel: Vector3[];
-};
+import { Star3D } from './star';
 
 type IState = {};
 type IProps = {
@@ -82,78 +67,59 @@ export default class Index extends React.Component<IProps, IState> {
   });
   controls: TrackballControls | null = null;
   mainProcess: any;
-  g: { [key: string]: Vector3 } = {};
-  spheres: { [key: string]: THREE.Mesh } = {};
-  lines: { [key: string]: THREE.Line[] } = {};
-
-  stars: StarInfo[] = [];
+  forceDict: { [key: string]: Vector3 } = {};
+  stars: Star3D[] = [];
   animateFrame: any;
-  textSprite: { [key: string]: THREE.Sprite } = {};
   light: THREE.Light | null = null;
+  focousedStar: Star3D | null = null;
 
   /** 获取初始星体列表 */
   initStars = (total: number) => {
+    let stars: Star3D[] = [];
     if (this.props.sandboxMode) {
-      this.stars = this.props.sandboxData.map((data, index) => ({
-        id: `#${index + 1}`,
-        x: data.position.x,
-        y: data.position.y,
-        z: data.position.z,
-        size: data.size,
-        color: data.color,
-        speed: JSON.parse(JSON.stringify(data.speed)),
-        travel: [JSON.parse(JSON.stringify(data.position))]
-      }));
-      return;
+      // 沙盒模式
+      stars = this.props.sandboxData.map(
+        (data, index) =>
+          new Star3D({
+            id: `#${index + 1}`,
+            position: {
+              x: data.position.x,
+              y: data.position.y,
+              z: data.position.z
+            },
+            size: data.size,
+            color: data.color,
+            speed: JSON.parse(JSON.stringify(data.speed))
+          })
+      );
+    } else {
+      // 先加入恒星
+      if (!this.props.disableCenter) {
+        stars.push(
+          new Star3D({
+            id: '#0',
+            position: {
+              x: 0,
+              y: 0,
+              z: 0
+            },
+            size: this.props.centerSize,
+            color: 'red',
+            speed: { x: 0, y: 0, z: 0 }
+          })
+        );
+      }
+      for (let i = 1; i <= this.props.initialNum; i++) {
+        stars.push(
+          Star3D.ofRandom({
+            speedRange: this.props.speedRange,
+            sizeRange: this.props.sizeRange,
+            id: `#${i}`
+          })
+        );
+      }
     }
-
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    let stars: StarInfo[] = [];
-    // 先加入恒星
-    if (!this.props.disableCenter) {
-      stars.push({
-        id: '#0',
-        x: 0,
-        y: 0,
-        z: 0,
-        size: this.props.centerSize,
-        color: 'red',
-        speed: { x: 0, y: 0, z: 0 },
-        travel: []
-      });
-    }
-
-    const sizeRange = this.props.sizeRange.sort();
-    const minSize = sizeRange[0];
-    const maxSize = sizeRange[1];
-    for (let i = 1; i <= total; i++) {
-      const x = Math.ceil(width - Math.random() * width * 2);
-      const y = Math.ceil(height - Math.random() * height * 2);
-      // TODO:怎么确定一个合理的z值范围？
-      const z = Math.ceil(height - Math.random() * height * 2);
-      const size = Math.ceil(Math.random() * (maxSize - minSize) + minSize);
-      const color = randomColor();
-      const speedRange = this.props.speedRange.sort();
-      const minSpeed = speedRange[0];
-      const maxSpeed = speedRange[1];
-      const speed = {
-        x:
-          Math.random() *
-          (maxSpeed - minSpeed + minSpeed) *
-          (Math.random() > 0.5 ? 1 : -1),
-        y:
-          Math.random() *
-          (maxSpeed - minSpeed + minSpeed) *
-          (Math.random() > 0.5 ? 1 : -1),
-        z:
-          Math.random() *
-          (maxSpeed - minSpeed + minSpeed) *
-          (Math.random() > 0.5 ? 1 : -1)
-      };
-      const travel = [{ x, y, z }];
-      stars.push({ id: `#${i}`, x, y, z, size, color, speed, travel });
-    }
+    stars.forEach(star => (star.scene = this.scene));
     this.stars = stars;
   };
 
@@ -165,12 +131,12 @@ export default class Index extends React.Component<IProps, IState> {
       result[value.id] = { x: 0, y: 0, z: 0 };
     });
     let deleteIndex: number[] = [];
-    const changeList: { [key: string]: StarInfo } = {};
+    const changeList: { [key: string]: Star3D } = {};
     stars.forEach((star1, index1) => {
       stars.slice(index1 + 1, stars.length).forEach((star2, index2) => {
-        const xDistance = star1.x - star2.x;
-        const yDistance = star1.y - star2.y;
-        const zDistance = star1.z - star2.z;
+        const xDistance = star1.position.x - star2.position.x;
+        const yDistance = star1.position.y - star2.position.y;
+        const zDistance = star1.position.z - star2.position.z;
         const distance_2 =
           Math.pow(xDistance, 2) +
           Math.pow(yDistance, 2) +
@@ -198,27 +164,24 @@ export default class Index extends React.Component<IProps, IState> {
             z: P_z / (star1G + star2G)
           };
           // 对于未被清除的星体要计算其动量,对其受力和大小进行重新计算,由于真正的星体也不完全是刚性的，这里当作是只要碰撞就不会再分开
-          let deleteId = '';
           if (star1.size >= star2.size) {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
-            if (this.props.mergeMode) star1.size = totalSize;
+            if (this.props.mergeMode) star1.setSize = totalSize;
             if (star1.id !== '#0') {
               star1.speed = speed;
               changeList[star1.id] = star1;
             }
-            deleteId = star2.id;
+            // 移除star2
+            star2.remove();
           } else {
             deleteIndex.push(index1);
-            if (this.props.mergeMode) star2.size = totalSize;
+            if (this.props.mergeMode) star2.setSize = totalSize;
             star2.speed = speed;
             changeList[star2.id] = star2;
-            deleteId = star1.id;
+            // 移除star1
+            star1.remove();
           }
-          this.scene.remove(this.spheres[deleteId]);
-          this.lines[deleteId].forEach(value => this.scene.remove(value));
-          delete this.spheres[deleteId];
-          delete this.lines[deleteId];
         } else {
           // 计算引力，这里的g只是一个相对量，用于控制引力大小
           const f = ((this.props.g / 100) * (star1G * star2G)) / distance_2;
@@ -236,7 +199,7 @@ export default class Index extends React.Component<IProps, IState> {
       });
     });
 
-    this.g = result;
+    this.forceDict = result;
     stars = stars
       .filter((value, index) => {
         return deleteIndex.indexOf(index) === -1;
@@ -252,51 +215,20 @@ export default class Index extends React.Component<IProps, IState> {
     this.stars = stars;
   };
 
-  /** 根据速度、加速度获取下一个坐标 */
-  moveStar = (starInfo: StarInfo): StarInfo => {
-    let { x, y, z, travel, speed } = starInfo;
-    const { travelLength, step } = this.props;
-    travel.push({ x, y, z });
-    if (travel.length > travelLength)
-      travel = travelLength > 0 ? travel.slice(-travelLength) : [];
-
-    const f = this.g[starInfo.id];
-    const starG = Math.pow(starInfo.size, 3);
-
-    // 先计算加速度对速度的影响
-    speed.x += (f.x / starG) * step;
-    speed.y += (f.y / starG) * step;
-    speed.z += (f.z / starG) * step;
-    // 然后将速度直接加到坐标上
-    x += speed.x * step;
-    y += speed.y * step;
-    z += speed.z * step;
-    // 移动星体
-    this.spheres[starInfo.id].translateX(speed.x * step);
-    this.spheres[starInfo.id].translateY(speed.y * step);
-    this.spheres[starInfo.id].translateZ(speed.z * step);
-    // 移动id标签
-    if (this.props.showID) {
-      this.textSprite[starInfo.id].translateX(speed.x * step);
-      this.textSprite[starInfo.id].translateY(speed.y * step);
-      this.textSprite[starInfo.id].translateZ(speed.z * step);
-    }
-
-    return {
-      ...starInfo,
-      x,
-      y,
-      z,
-      travel,
-      speed
-    };
-  };
-
+  /** 暂停 */
   pause = () => {
     if (this.mainProcess) {
       clearInterval(this.mainProcess);
     }
   };
+  /** 锁定视角 */
+  focousOn = (star: Star3D) => {
+    const controls = this.controls as TrackballControls;
+    controls.target.x = star.position.x;
+    controls.target.y = star.position.y;
+    controls.target.z = star.position.z;
+  };
+
   /**
    * @param init 是否需要重新初始化所有参数
    */
@@ -318,21 +250,25 @@ export default class Index extends React.Component<IProps, IState> {
           logarithmicDepthBuffer: true
         });
         this.controls = null;
-        this.g = {};
-        this.spheres = {};
-        this.lines = {};
+        this.forceDict = {};
         this.animateFrame = undefined;
         this.init();
         this.animate();
       }
       this.mainProcess = setInterval(() => {
         this.calcForce();
-        this.stars.forEach((starInfo, index) => {
-          if (starInfo.id === '#0') return;
-          const nextStarInfo = this.moveStar(starInfo);
-          this.stars[index] = nextStarInfo;
-          this.drawLines(nextStarInfo);
+        this.stars.forEach((star, index) => {
+          if (star.id === '#0') return;
+          star.moveToNext(
+            this.props.step,
+            this.forceDict,
+            this.props.travelLength
+          );
         });
+        if (this.focousedStar) {
+          this.focousOn(this.focousedStar);
+        }
+        this.renderGL();
         // 强制更新是为了刷新左侧面板的数据
         this.forceUpdate();
       }, 20 / this.props.playSpeed);
@@ -363,39 +299,17 @@ export default class Index extends React.Component<IProps, IState> {
     this.light = light;
   };
 
-  createStar = (starInfo: StarInfo) => {
-    const sphereMaterial =
-      this.props.sandboxMode || this.props.disableCenter
-        ? new THREE.MeshBasicMaterial({
-            color: starInfo.color
-          })
-        : new THREE.MeshLambertMaterial({
-            color: starInfo.color
-          });
-    const sphere = new THREE.Mesh(
-      new THREE.SphereBufferGeometry(starInfo.size, 50, 50),
-      sphereMaterial
-    );
-    sphere.position.x = starInfo.x;
-    sphere.position.y = starInfo.y;
-    sphere.position.z = starInfo.z;
-    this.spheres[starInfo.id] = sphere;
-    this.scene.add(this.spheres[starInfo.id]);
-  };
-
   init = () => {
     const camera = this.camera;
     // this.scene.background = new THREE.Color('white');
     // 初始化星体&尾迹
-    this.stars.forEach(starInfo => {
-      // 星体
-      this.createStar(starInfo);
-      // 尾迹
-      this.createLine(starInfo);
-      if (this.props.showID) {
-        // ID标签
-        this.createSprite(starInfo);
-      }
+    this.stars.forEach(star => {
+      star.scene = this.scene;
+      star.create(
+        this.props.sandboxMode,
+        this.props.disableCenter,
+        this.props.showID
+      );
     });
 
     // 光源
@@ -447,73 +361,6 @@ export default class Index extends React.Component<IProps, IState> {
     this.renderGL();
   };
 
-  createLine = (starInfo: StarInfo, point1?: Vector3, point2?: Vector3) => {
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: starInfo.color
-    });
-    const geometry = new THREE.Geometry();
-    if (!point1 || !point2) {
-      // 没有指定point就作为初始化数据处理
-      geometry.vertices.push(
-        new THREE.Vector3(starInfo.x, starInfo.y, starInfo.z)
-      );
-      geometry.vertices.push(
-        new THREE.Vector3(
-          starInfo.x + starInfo.speed.x,
-          starInfo.y + starInfo.speed.y,
-          starInfo.z + starInfo.speed.z
-        )
-      );
-    } else {
-      geometry.vertices.push(new THREE.Vector3(point1.x, point1.y, point1.z));
-      geometry.vertices.push(new THREE.Vector3(point2.x, point2.y, point2.z));
-    }
-    const line = new THREE.Line(geometry, lineMaterial);
-    line.frustumCulled = false;
-    this.scene.add(line);
-    if (this.lines[starInfo.id]) {
-      this.lines[starInfo.id].push(line);
-    } else {
-      this.lines[starInfo.id] = [line];
-    }
-  };
-  /** 创建文字标签 */
-  createSprite = (starInfo: StarInfo) => {
-    const textSprite = makeTextSprite(starInfo.id, { fontsize: 30 });
-    textSprite.position.x = starInfo.x + 10;
-    textSprite.position.y = starInfo.y;
-    textSprite.position.z = starInfo.z;
-    this.scene.add(textSprite);
-    this.textSprite[starInfo.id] = textSprite;
-  };
-  /**
-   * 绘制指定starInfo的尾迹(travel)
-   */
-  drawLines = (starInfo: StarInfo) => {
-    const lines = this.lines[starInfo.id];
-    const travel = starInfo.travel;
-    // 更新线条位置
-    lines.forEach((value, index) => {
-      if (travel[index + 1]) {
-        //@ts-ignore
-        value.geometry.vertices[0] = travel[index];
-        //@ts-ignore
-        value.geometry.vertices[1] = travel[index + 1];
-        //@ts-ignore
-        value.geometry.verticesNeedUpdate = true;
-      }
-    });
-
-    // 线条长度还未达到上限
-    if (lines.length < travel.length - 1) {
-      // 添加线条
-      for (let i = lines.length; i < travel.length; i++) {
-        if (travel[i + 1]) {
-          this.createLine(starInfo, travel[i], travel[i + 1]);
-        }
-      }
-    }
-  };
   componentDidMount() {
     if (this.props.canvasRef) this.props.canvasRef(this);
     // 上面的初始化setState执行很慢所以后面的就加个延时
@@ -521,6 +368,7 @@ export default class Index extends React.Component<IProps, IState> {
   }
 
   componentWillUnmount() {
+    // forceContextLoss 非常重要，否则即使组件卸载 依旧会占用大量计算资源，除非页面刷新
     this.renderer.forceContextLoss();
     cancelAnimationFrame(this.animateFrame);
     clearInterval(this.mainProcess);
@@ -533,31 +381,21 @@ export default class Index extends React.Component<IProps, IState> {
     }
   }
   componentWillReceiveProps(nextProps: IProps) {
-    if (nextProps.travelLength < this.props.travelLength) {
+    if (nextProps.travelLength !== this.props.travelLength) {
       // 实时控制尾迹长度
-      // 如果缩短，清除所有多余的线条
-      Object.keys(this.lines).forEach(key => {
-        this.lines[key]
-          .slice(0, this.props.travelLength - nextProps.travelLength)
-          .forEach(line => {
-            this.scene.remove(line);
-            //@ts-ignore
-            line.geometry.verticesNeedUpdate = true;
-          });
-        this.lines[key] = this.lines[key].slice(-nextProps.travelLength);
-      });
+      this.stars.forEach(star =>
+        star.changeTravelLength(nextProps.travelLength, this.props.travelLength)
+      );
     }
     if (nextProps.showID !== this.props.showID) {
       // 实时控制id标签显示
       if (nextProps.showID) {
-        this.stars.forEach(starInfo => {
-          this.createSprite(starInfo);
+        this.stars.forEach(star => {
+          star.createSprite();
         });
       } else {
-        Object.keys(this.textSprite).forEach(key => {
-          const textSprite = this.textSprite[key];
-          this.scene.remove(textSprite);
-          delete this.textSprite[key];
+        this.stars.forEach(star => {
+          star.removeTextSpire();
         });
       }
     }
@@ -566,8 +404,14 @@ export default class Index extends React.Component<IProps, IState> {
       // 实时增删中心天体
 
       if (nextProps.disableCenter) {
-        this.stars = this.stars.filter(star => star.id !== '#0');
-        this.scene.remove(this.spheres['#0']);
+        // 删除中心天体
+        this.stars = this.stars.filter(star => {
+          if (star.id === '#0') {
+            star.remove();
+            return false;
+          }
+          return true;
+        });
         if (this.light) {
           // 删除原有光源
           this.scene.remove(this.light);
@@ -580,44 +424,71 @@ export default class Index extends React.Component<IProps, IState> {
         this.scene.add(pointLight);
         this.light = pointLight;
       } else {
+        // 增加中心天体a
         // 删除原有光源
         if (this.light) {
           this.scene.remove(this.light);
         }
         const centerInfo = {
           id: '#0',
-          x: 0,
-          y: 0,
-          z: 0,
+          position: { x: 0, y: 0, z: 0 },
           size: this.props.centerSize,
           color: 'red',
-          speed: { x: 0, y: 0, z: 0 },
-          travel: []
+          speed: { x: 0, y: 0, z: 0 }
         };
-        this.createStar(centerInfo);
-        this.stars.push(centerInfo);
+        const centerStar = new Star3D(centerInfo);
+        centerStar.scene = this.scene;
+        this.stars.push(centerStar);
+        centerStar.create(
+          this.props.sandboxMode,
+          this.props.disableCenter,
+          this.props.showID
+        );
         this.createCenterLight(true);
       }
     }
   }
 
   public render() {
+    console.log(this.stars);
     return (
       <div>
         <div ref={'container'} />
-        <ul className={style.info_panel} hidden={window.screen.width < 720}>
-          {this.stars.slice(0, 20).map(value => {
-            return (
-              <li key={value.id}>
-                <span style={{ color: value.color }}>{value.id}</span>
-                <span className={style.speed_info}>
-                  speed_x:{value.speed.x.toFixed(3)}&emsp;speed_y:
-                  {value.speed.y.toFixed(3)}&emsp;speed_z:
-                  {value.speed.z.toFixed(3)}
-                </span>
-              </li>
-            );
-          })}
+        <ul
+          className={style.info_panel + ` ${style.info_panel_3d}`}
+          hidden={window.screen.width < 720}
+        >
+          {this.stars
+            .sort((value1, value2) => value2.size - value1.size)
+            .slice(0, 9)
+            .map(value => {
+              const focoused =
+                this.focousedStar && this.focousedStar.id === value.id;
+              return (
+                <li
+                  key={value.id}
+                  onClick={() => {
+                    if (focoused) {
+                      this.focousedStar = null;
+                    } else {
+                      this.focousedStar = value;
+                    }
+                  }}
+                  style={{
+                    background: focoused ? 'RGBA(255,255,255,0.3)' : undefined
+                  }}
+                >
+                  <span style={{ color: value.color }}>{value.id}</span>
+                  <span className={style.speed_info}>
+                    mass:{value.mass.toFixed(3)}&emsp; speed_x:
+                    {value.speed.x.toFixed(3)}
+                    &emsp;speed_y:
+                    {value.speed.y.toFixed(3)}&emsp;speed_z:
+                    {value.speed.z.toFixed(3)}
+                  </span>
+                </li>
+              );
+            })}
         </ul>
       </div>
     );

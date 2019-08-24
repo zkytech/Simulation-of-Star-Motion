@@ -1,5 +1,5 @@
-import { randomRGB, deepCopy } from './utils';
-
+import { randomRGB, randomColor, deepCopy, makeTextSprite } from './utils';
+import * as THREE from 'three';
 class Star {
   constructor(params: {
     id: string;
@@ -42,18 +42,20 @@ class Star2D extends Star {
 
   /** 生成随机实例 */
   public static ofRandom = (param: RandomStarGeneratorParam) => {
-    const height = window.innerHeight;
-    const width = window.innerWidth;
+    const height = 800;
+    const width = 800;
     // 确保范围数据是从小到大排列
     const sizeRange = param.sizeRange.sort();
     const speedRange = param.speedRange.sort();
-    const size = Math.ceil(
-      Math.random() * (sizeRange[1] - sizeRange[0]) + sizeRange[0]
-    );
+    const size = Math.random() * (sizeRange[1] - sizeRange[0]) + sizeRange[0];
     const color = randomRGB();
     const position = {
-      x: Math.ceil(Math.random() * width),
-      y: Math.ceil(Math.random() * height)
+      x:
+        Math.random() * width * (Math.random() > 0.5 ? 1 : -1) +
+        window.innerWidth / 2,
+      y:
+        Math.random() * height * (Math.random() > 0.5 ? 1 : -1) +
+        window.innerHeight / 2
     };
     const speed = {
       x:
@@ -118,7 +120,7 @@ class Star2D extends Star {
    * @param showID 是否显示id
    */
 
-  drawArc = (
+  private drawArc = (
     showID: boolean,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions
@@ -149,7 +151,7 @@ class Star2D extends Star {
    * 绘制尾迹
    * @param travelLength 尾迹长度
    */
-  drawTravel = (
+  private drawTravel = (
     travelLength: number,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions
@@ -170,4 +172,229 @@ class Star2D extends Star {
   };
 }
 
-export { Star2D };
+class Star3D extends Star {
+  constructor(params: StarInfo3D) {
+    super(params);
+    this.speed = params.speed;
+    this.position = params.position;
+  }
+  scene: THREE.Scene = {} as THREE.Scene;
+  travel = [] as Vector3[];
+  speed = {} as Vector3;
+  position = {} as Vector3;
+  sphere: THREE.Mesh = {} as THREE.Mesh;
+  textSprite: THREE.Sprite = {} as THREE.Sprite;
+  lines: THREE.Line[] = [];
+  /**生成随机的3D星体*/
+  public static ofRandom = (param: RandomStarGeneratorParam) => {
+    const length = 800;
+    const height = 800;
+    const width = 800;
+    // 确保范围数据是从小到大排列
+    const sizeRange = param.sizeRange.sort();
+    const speedRange = param.speedRange.sort();
+    const size = Math.random() * (sizeRange[1] - sizeRange[0]) + sizeRange[0];
+    const color = randomColor();
+    const position = {
+      x: ((Math.random() * length) / 2) * (Math.random() > 0.5 ? 1 : -1),
+      y: ((Math.random() * height) / 2) * (Math.random() > 0.5 ? 1 : -1),
+      z: ((Math.random() * width) / 2) * (Math.random() > 0.5 ? 1 : -1)
+    };
+    const speed = {
+      x:
+        Math.random() *
+        (speedRange[1] - speedRange[0] + speedRange[0]) *
+        (Math.random() > 0.5 ? 1 : -1),
+      y:
+        Math.random() *
+        (speedRange[1] - speedRange[0] + speedRange[0]) *
+        (Math.random() > 0.5 ? 1 : -1),
+      z:
+        Math.random() *
+        (speedRange[1] - speedRange[0] + speedRange[0]) *
+        (Math.random() > 0.5 ? 1 : -1)
+    };
+    return new Star3D({
+      id: param.id,
+      size,
+      color,
+      position,
+      speed
+    });
+  };
+  /**
+   * 移动到下一个位置
+   * @param step 移动步长
+   * @param travelLength 尾迹长度
+   */
+  moveToNext = (step: number, forceDict: ForceDict3D, travelLength: number) => {
+    // 受力
+    const force = forceDict[this.id];
+    // 加速度
+    const a = {
+      x: force.x / this.mass,
+      y: force.y / this.mass,
+      z: force.z / this.mass
+    };
+    // 移动位置（按照匀变速运动计算） 位移x = v_0*t + 0.5*a*t^2
+    // 这种方式比按照匀速运动更为合理，误差更小
+    // this.position.x += this.speed.x * step + 0.5 * Math.pow(step, 2) * a.x;
+    // this.position.y += this.speed.y * step + 0.5 * Math.pow(step, 2) * a.y;
+    // this.position.z += this.speed.z * step + 0.5 * Math.pow(step, 2) * a.z;
+
+    // 将加速度的影响叠加到速度上
+    this.speed.x += a.x * step;
+    this.speed.y += a.y * step;
+    this.speed.z += a.z * step;
+    // 这种计算位移的方式虽然粗糙，但娱乐性很强
+    this.position.x += this.speed.x * step;
+    this.position.y += this.speed.y * step;
+    this.position.z += this.speed.z * step;
+    // 将坐标放入travel
+    this.travel.push(deepCopy(this.position));
+    // 移动场景中的物体
+    this.sphere.position.x = this.position.x;
+    this.sphere.position.y = this.position.y;
+    this.sphere.position.z = this.position.z;
+    this.moveLines(travelLength);
+    this.moveTextSprite();
+  };
+
+  /** 绘制球体 */
+  private createSphere = (sandboxMode: boolean, disableCenter: boolean) => {
+    const sphereMaterial =
+      sandboxMode || disableCenter // 沙盒模式和无中心天体的情况下没有光源，需要改变材质
+        ? new THREE.MeshBasicMaterial({
+            color: this.color
+          })
+        : new THREE.MeshLambertMaterial({
+            color: this.color
+          });
+    const sphere = new THREE.Mesh(
+      new THREE.SphereBufferGeometry(this.size, 50, 50),
+      sphereMaterial
+    );
+    sphere.position.x = this.position.x;
+    sphere.position.y = this.position.y;
+    sphere.position.z = this.position.z;
+    this.sphere = sphere;
+    this.scene.add(this.sphere);
+  };
+
+  // 创建线条
+  private createLine = (point1?: Vector3, point2?: Vector3) => {
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: this.color
+    });
+    const geometry = new THREE.Geometry();
+    if (!point1 || !point2) {
+      // 没有指定point就作为初始化数据处理
+      geometry.vertices.push(
+        new THREE.Vector3(this.position.x, this.position.y, this.position.z)
+      );
+      geometry.vertices.push(
+        new THREE.Vector3(
+          this.position.x + this.speed.x,
+          this.position.y + this.speed.y,
+          this.position.z + this.speed.z
+        )
+      );
+    } else {
+      geometry.vertices.push(new THREE.Vector3(point1.x, point1.y, point1.z));
+      geometry.vertices.push(new THREE.Vector3(point2.x, point2.y, point2.z));
+    }
+    const line = new THREE.Line(geometry, lineMaterial);
+    line.frustumCulled = false; // 这条设置是为了防止线条被相机错误隐藏
+    this.scene.add(line);
+    this.lines.push(line);
+  };
+
+  /** 创建文字标签 */
+  createSprite = () => {
+    const textSprite = makeTextSprite(this.id, { fontsize: 30 });
+    textSprite.position.x = this.position.x + 10;
+    textSprite.position.y = this.position.y;
+    textSprite.position.z = this.position.z;
+    this.scene.add(textSprite);
+    this.textSprite = textSprite;
+  };
+
+  /** 初始化场景中的天体 */
+  create = (sandboxMode: boolean, disableCenter: boolean, showID: boolean) => {
+    this.createSphere(sandboxMode, disableCenter);
+    this.createLine();
+    if (showID) this.createSprite();
+  };
+
+  moveTextSprite = () => {
+    if (!this.textSprite.position) return; // 如果场景中没有textSprite，直接返回
+    this.textSprite.position.x = this.position.x + 10;
+    this.textSprite.position.y = this.position.y;
+    this.textSprite.position.z = this.position.z;
+  };
+
+  /** 移动线条 */
+  moveLines = (travelLength: number) => {
+    // 保证travel数组的长度没有超过规定值
+    this.travel = this.travel.slice(-travelLength);
+    const travel = this.travel;
+    const lines = this.lines;
+    // 更新线条位置
+    lines.forEach((value, index) => {
+      if (travel[index + 1]) {
+        //@ts-ignore
+        value.geometry.vertices[0] = travel[index];
+        //@ts-ignore
+        value.geometry.vertices[1] = travel[index + 1];
+        //@ts-ignore
+        value.geometry.verticesNeedUpdate = true;
+      }
+    });
+
+    // 线条长度还未达到上限
+    if (lines.length < travel.length - 1) {
+      // 添加线条
+      for (let i = lines.length; i < travel.length; i++) {
+        if (travel[i + 1]) {
+          this.createLine(travel[i], travel[i + 1]);
+        }
+      }
+    }
+  };
+
+  /** 改变travelLength */
+  changeTravelLength = (newTravelLength: number, oldTravelLength: number) => {
+    if (newTravelLength > oldTravelLength) return; // 如果新的长度大于原来的，什么都不用做
+    this.travel = this.travel.slice(-newTravelLength);
+    // 要删除的线条列表
+    const deletedLines = this.lines.slice(0, oldTravelLength - newTravelLength);
+    this.lines = this.lines.slice(-newTravelLength);
+    // 将多余的线条从场景中删除
+    deletedLines.forEach(line => this.scene.remove(line));
+  };
+
+  /** 移除文字标签 */
+  removeTextSpire = () => {
+    this.scene.remove(this.textSprite);
+    this.textSprite = {} as THREE.Sprite;
+  };
+  /** 移除球体 */
+  private removeSphere = () => {
+    this.scene.remove(this.sphere);
+  };
+  /** 移除所有线条 */
+  private removeLines = () => {
+    this.lines.forEach(line => this.scene.remove(line));
+    this.travel = [];
+    this.lines = [];
+  };
+
+  /** 移除整个星体 */
+  remove = () => {
+    this.removeSphere();
+    this.removeLines();
+    this.removeTextSpire();
+  };
+}
+
+export { Star2D, Star3D };

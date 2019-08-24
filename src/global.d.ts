@@ -15,6 +15,13 @@ declare type StarInfo2D = {
   position: Vector2;
   speed: Vector2;
 };
+declare type StarInfo3D = {
+  id: string;
+  color: string;
+  size: number;
+  position: Vector3;
+  speed: Vector3;
+};
 declare type RandomStarGeneratorParam = {
   /** 星体大小范围 */
   sizeRange: [number, number];
@@ -34,4 +41,16 @@ declare type SimulateMouseEvent = {
   isMobile: boolean;
   scale: number;
   center: Vector2;
+};
+
+declare type ExportData = {
+  stars: SandboxData[];
+  params: ExportParams;
+};
+declare type ExportParams = {
+  g: number;
+  step: number;
+  centerSize: number;
+  disableCenter: boolean;
+  mergeMode: boolean;
 };

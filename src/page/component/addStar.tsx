@@ -6,7 +6,11 @@ import { saveAsJson } from './utils';
 
 type IProps = {
   mode: '2d' | '3d';
-  onSubmit: (datas: SandboxData[]) => void;
+  onSubmit: (param: {
+    stars: SandboxData[];
+    params: ExportParams | undefined;
+  }) => void;
+  params: ExportParams;
 };
 
 const borderStyle = { borderLeft: '1px solid rgba(0,0,0,0.3)' };
@@ -17,9 +21,10 @@ let initRowData: SandboxData = {
   size: 5
 };
 
-const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
+const Index: FunctionComponent<IProps> = ({ mode, onSubmit, params }) => {
   const [rowNum, setRowNum] = useState(2);
   const [forceRender, setForceRender] = useState(false); // 这个值是用来强制重新渲染的
+  const [importParam, setImportParam] = useState<ExportParams>();
   const [rowData, setRowData] = useState<SandboxData[]>([
     {
       position: { x: 900, y: 300, z: 0 },
@@ -36,24 +41,53 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
   ]);
   const dataRows: JSX.Element[] = [];
   dataRows.push(
-    <Row className={style.add_data_row} key={-1}>
-      <Col span={mode === '3d' ? 9 : 6}>坐标</Col>
-      <Col span={mode === '3d' ? 9 : 6} style={borderStyle}>
+    <Row className={style.add_data_row} key={-2}>
+      <Col span={mode === '3d' ? 9 : 8} style={borderStyle}>
+        坐标
+      </Col>
+      <Col span={mode === '3d' ? 9 : 8} style={borderStyle}>
         速度
       </Col>
-      <Col span={3} style={borderStyle}>
+      <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
         颜色
       </Col>
-      <Col span={3} style={borderStyle}>
+      <Col span={mode === '3d' ? 2 : 3} style={borderStyle}>
         大小
+      </Col>
+    </Row>
+  );
+  dataRows.push(
+    <Row className={style.add_data_row} key={-1}>
+      <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
+        X
+      </Col>
+      <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
+        Y
+      </Col>
+      <Col span={mode === '3d' ? 3 : 0} style={borderStyle}>
+        Z
+      </Col>
+      <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
+        X
+      </Col>
+      <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
+        Y
+      </Col>
+      <Col span={mode === '3d' ? 3 : 0} style={borderStyle}>
+        Z
+      </Col>
+      <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
+        &emsp;
+      </Col>
+      <Col span={3} style={borderStyle}>
+        &emsp;
       </Col>
     </Row>
   );
   for (let i = 0; i < rowNum; i++) {
     dataRows.push(
       <Row className={style.add_data_row} key={i}>
-        <Col span={3}>
-          X:
+        <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
           <InputNumber
             value={rowData[i].position.x}
             onChange={value => {
@@ -63,8 +97,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
             }}
           />
         </Col>
-        <Col span={3}>
-          Y:
+        <Col span={mode === '3d' ? 3 : 4}>
           <InputNumber
             value={rowData[i].position.y}
             onChange={value => {
@@ -75,7 +108,6 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
           />
         </Col>
         <Col span={mode === '2d' ? 0 : 3}>
-          Z:
           <InputNumber
             value={rowData[i].position.z}
             onChange={value => {
@@ -85,8 +117,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
             }}
           />
         </Col>
-        <Col span={3} style={borderStyle}>
-          X:
+        <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
           <InputNumber
             step={0.1}
             value={rowData[i].speed.x}
@@ -97,8 +128,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
             }}
           />
         </Col>
-        <Col span={3}>
-          Y:
+        <Col span={mode === '3d' ? 3 : 4}>
           <InputNumber
             step={0.1}
             value={rowData[i].speed.y}
@@ -109,8 +139,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
             }}
           />
         </Col>
-        <Col span={mode === '2d' ? 0 : 3}>
-          Z:
+        <Col span={mode === '3d' ? 3 : 0}>
           <InputNumber
             step={0.1}
             value={rowData[i].speed.z}
@@ -121,7 +150,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
             }}
           />
         </Col>
-        <Col span={3} style={borderStyle}>
+        <Col span={mode === '3d' ? 3 : 4} style={borderStyle}>
           <Input
             style={{ width: '98%', paddingLeft: '1%' }}
             value={rowData[i].color}
@@ -132,7 +161,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
             }}
           />
         </Col>
-        <Col span={2} style={borderStyle}>
+        <Col span={mode === '3d' ? 2 : 3} style={borderStyle}>
           <InputNumber
             style={{ width: '98%', paddingLeft: '1%' }}
             value={rowData[i].size}
@@ -161,8 +190,21 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
     );
   }
 
+  const submit = () => {
+    onSubmit({ stars: rowData, params: importParam });
+  };
   return (
-    <div style={{ paddingBottom: '60px' }}>
+    <div
+      style={{ paddingBottom: '60px' }}
+      onKeyDown={e => {
+        if (e && e.keyCode === 13) {
+          // 回车直接提交
+          e.stopPropagation();
+          e.preventDefault();
+          submit();
+        }
+      }}
+    >
       <Button
         type="dashed"
         onClick={() => {
@@ -179,8 +221,9 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
           fileReader.onload = (e: any) => {
             // 读取完成后的回调
             const jsonText = e.target.result;
-            const data = JSON.parse(jsonText);
-            setRowData(data);
+            const data = JSON.parse(jsonText) as ExportData;
+            setRowData(data.stars);
+            setImportParam(data.params);
             setRowNum(2);
           };
           fileReader.readAsText(file);
@@ -201,7 +244,11 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
       {dataRows}
       <Button
         onClick={() => {
-          saveAsJson(rowData, `${new Date().toDateString()}星体数据.json`);
+          // 导出的数据格式
+          saveAsJson(
+            { stars: rowData, params: params },
+            `${new Date().toDateString()}星体数据.json`
+          );
         }}
         style={{ position: 'absolute', right: '130px', bottom: '10px' }}
         type={'link'}
@@ -209,7 +256,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit }) => {
         导出星体数据
       </Button>
       <Button
-        onClick={() => onSubmit(rowData)}
+        onClick={submit}
         type={'primary'}
         style={{ position: 'absolute', right: '30px', bottom: '10px' }}
       >

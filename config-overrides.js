@@ -11,11 +11,26 @@ const setGlobalObject = value => config => {
 
   return config
 }
-
+const addWebpackExternals = (externalDeps) => config => {
+  config.externals = {
+    ...config.externals,
+    ...externalDeps
+  };
+  return config;
+};
 
 
 module.exports = {
   webpack: override(
+    addWebpackExternals({
+      'react': 'React',
+      'react-dom': 'ReactDOM',
+      'three': 'THREE',
+      'hammerjs': 'Hammer',
+      'moment': 'moment',
+      'antd': 'antd'
+    }),
+
     // antd模块化加载
     fixBabelImports('import', {
       libraryName: 'antd',
