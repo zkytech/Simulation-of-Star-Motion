@@ -3,7 +3,6 @@ import * as React from 'react';
 import * as THREE from 'three';
 // @ts-ignore
 import { TrackballControls } from './controls/TrackballControls';
-import { randomColor, makeTextSprite } from './utils';
 import style from '../style.module.less';
 import { Star3D } from './star';
 
@@ -345,7 +344,6 @@ export default class Index extends React.Component<IProps, IState> {
 
   animate = () => {
     //@ts-ignore
-
     this.controls.update();
     this.renderGL();
     const frame = requestAnimationFrame(this.animate);
@@ -450,7 +448,6 @@ export default class Index extends React.Component<IProps, IState> {
   }
 
   public render() {
-    console.log(this.stars);
     return (
       <div>
         <div ref={'container'} />

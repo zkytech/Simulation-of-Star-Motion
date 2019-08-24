@@ -25,10 +25,10 @@ module.exports = {
     addWebpackExternals({
       'react': 'React',
       'react-dom': 'ReactDOM',
-      'three': 'THREE',
       'hammerjs': 'Hammer',
       'moment': 'moment',
-      'antd': 'antd'
+      'antd': 'antd',
+      'three': 'THREE'
     }),
 
     // antd模块化加载

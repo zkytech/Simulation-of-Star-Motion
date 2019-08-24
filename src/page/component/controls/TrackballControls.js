@@ -7,11 +7,12 @@
 
 import {
 	EventDispatcher,
-	MOUSE,
 	Quaternion,
 	Vector2,
 	Vector3
 } from "three";
+
+
 
 var TrackballControls = function (object, domElement) {
 
@@ -24,7 +25,14 @@ var TrackballControls = function (object, domElement) {
 		TOUCH_ROTATE: 3,
 		TOUCH_ZOOM_PAN: 4
 	};
-
+	var MOUSE = {
+		LEFT: 0,
+		MIDDLE: 1,
+		RIGHT: 2,
+		ROTATE: 0,
+		DOLLY: 1,
+		PAN: 2
+	};
 	this.object = object;
 	this.domElement = (domElement !== undefined) ? domElement : document;
 
@@ -169,6 +177,7 @@ var TrackballControls = function (object, domElement) {
 
 	this.rotateCamera = (function () {
 
+
 		var axis = new Vector3(),
 			quaternion = new Quaternion(),
 			eyeDirection = new Vector3(),
@@ -183,7 +192,6 @@ var TrackballControls = function (object, domElement) {
 			angle = moveDirection.length();
 
 			if (angle) {
-
 				_eye.copy(_this.object.position).sub(_this.target);
 
 				eyeDirection.copy(_eye).normalize();
@@ -320,19 +328,16 @@ var TrackballControls = function (object, domElement) {
 		_eye.subVectors(_this.object.position, _this.target);
 
 		if (!_this.noRotate) {
-
 			_this.rotateCamera();
 
 		}
 
 		if (!_this.noZoom) {
-
 			_this.zoomCamera();
 
 		}
 
 		if (!_this.noPan) {
-
 			_this.panCamera();
 
 		}
@@ -375,25 +380,18 @@ var TrackballControls = function (object, domElement) {
 	// listeners
 
 	function keydown(event) {
-
 		if (_this.enabled === false) return;
-
 		window.removeEventListener('keydown', keydown);
-
 		if (_keyState !== STATE.NONE) {
-
 			return;
 
 		} else if (event.keyCode === _this.keys[STATE.ROTATE] && !_this.noRotate) {
-
 			_keyState = STATE.ROTATE;
 
 		} else if (event.keyCode === _this.keys[STATE.ZOOM] && !_this.noZoom) {
-
 			_keyState = STATE.ZOOM;
 
 		} else if (event.keyCode === _this.keys[STATE.PAN] && !_this.noPan) {
-
 			_keyState = STATE.PAN;
 
 		}
@@ -413,12 +411,10 @@ var TrackballControls = function (object, domElement) {
 	function mousedown(event) {
 
 		if (_this.enabled === false) return;
-
 		event.preventDefault();
 		event.stopPropagation();
 
 		if (_state === STATE.NONE) {
-
 			switch (event.button) {
 
 				case _this.mouseButtons.LEFT:

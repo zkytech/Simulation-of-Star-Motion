@@ -172,3 +172,24 @@ export const saveAsJson = (data: any, fileName: string) => {
 export const deepCopy = (target: any) => {
   return JSON.parse(JSON.stringify(target));
 };
+
+/** 判断用户设备是否是pc */
+export const isPC = () => {
+  const userAgentInfo = navigator.userAgent;
+  const Agents = [
+    'Android',
+    'iPhone',
+    'SymbianOS',
+    'Windows Phone',
+    'iPad',
+    'iPod'
+  ];
+  let flag = true;
+  for (let v = 0; v < Agents.length; v++) {
+    if (userAgentInfo.indexOf(Agents[v]) > 0) {
+      flag = false;
+      break;
+    }
+  }
+  return flag;
+};

@@ -2,10 +2,9 @@
 import * as React from 'react';
 import style from '../style.module.less';
 import { Button } from 'antd';
-import { deepCopy } from './utils';
+import { deepCopy, isPC } from './utils';
 import Hammer from 'hammerjs';
 import { Star2D } from './star';
-
 type DoubleCord = { canvas: Vector2; screen: Vector2 }; // 画布坐标系，窗口坐标系
 
 type IState = {};
@@ -109,12 +108,19 @@ export default class Index extends React.Component<IProps, IState> {
   /** 鼠标拖动 */
   move = (event: MouseEvent) => {
     // 鼠标事件
-    if (event.type === 'mousedown') {
+    if (
+      !isPC() &&
+      (event.type === 'mouseup' ||
+        event.type === 'mousedown' ||
+        event.type === 'mousemove')
+    )
+      // 移动端不需要这些事件，因为移动端手指落点不可能是连续的，如果直接触发这里面的事件，会引发画面瞬移
+      return;
+    if (event.type === 'mousedown' || event.type === 'panmove') {
       this.mouse.button = 1;
     } else if (event.type === 'mouseup' || event.type === 'mouseout') {
       this.mouse.button = 0;
     }
-
     this.mouse.screen.x = event.clientX;
     this.mouse.screen.y = event.clientY;
     // 获得上次鼠标在画布中的位置
@@ -378,7 +384,6 @@ export default class Index extends React.Component<IProps, IState> {
 
   componentWillUnmount() {
     // 退出时清除循环任务
-    console.log('unmount 2d');
     clearInterval(this.mainProcess);
   }
 
@@ -398,7 +403,6 @@ export default class Index extends React.Component<IProps, IState> {
     hammer.get('pinch').set({ enable: true });
     hammer.on('pinchin', e => {
       // 两指相互靠近
-
       this.trackWheel({
         center: e.center as Vector2,
         scale: e.scale,
@@ -407,7 +411,6 @@ export default class Index extends React.Component<IProps, IState> {
     });
     hammer.on('pinchout', e => {
       // 两指相互远离
-
       this.trackWheel({
         center: e.center as Vector2,
         scale: e.scale,
@@ -427,7 +430,7 @@ export default class Index extends React.Component<IProps, IState> {
     });
     hammer.on('panmove', e => {
       let event = {
-        type: 'mousedown',
+        type: 'panmove',
         clientX: e.pointers[0].clientX,
         clientY: e.pointers[0].clientY
       };
