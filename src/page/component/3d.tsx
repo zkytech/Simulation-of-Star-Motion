@@ -451,13 +451,15 @@ export default class Index extends React.Component<IProps, IState> {
     return (
       <div>
         <div ref={'container'} />
-        <ul
-          className={style.info_panel + ` ${style.info_panel_3d}`}
-          hidden={window.screen.width < 720}
-        >
+        <ul className={style.info_panel + ` ${style.info_panel_3d}`}>
           {this.stars
             .sort((value1, value2) => value2.size - value1.size)
-            .slice(0, 9)
+            .slice(
+              0,
+              window.innerWidth < 1000
+                ? Math.floor((window.innerHeight - 150) / 30)
+                : Math.floor((window.innerHeight - 100) / 95)
+            )
             .map(value => {
               const focoused =
                 this.focousedStar && this.focousedStar.id === value.id;
@@ -472,17 +474,23 @@ export default class Index extends React.Component<IProps, IState> {
                     }
                   }}
                   style={{
-                    background: focoused ? 'RGBA(255,255,255,0.3)' : undefined
+                    background: focoused ? 'RGBA(255,255,255,0.3)' : undefined,
+                    height: window.innerWidth < 1000 ? '30px' : '90px',
+                    width: window.innerWidth < 1000 ? '50px' : undefined
                   }}
                 >
                   <span style={{ color: value.color }}>{value.id}</span>
-                  <span className={style.speed_info}>
-                    mass:{value.mass.toFixed(3)}&emsp; speed_x:
-                    {value.speed.x.toFixed(3)}
-                    &emsp;speed_y:
-                    {value.speed.y.toFixed(3)}&emsp;speed_z:
-                    {value.speed.z.toFixed(3)}
-                  </span>
+                  {window.innerWidth < 1000 ? (
+                    ''
+                  ) : (
+                    <span className={style.speed_info}>
+                      mass:{value.mass.toFixed(3)}&emsp; speed_x:
+                      {value.speed.x.toFixed(3)}
+                      &emsp;speed_y:
+                      {value.speed.y.toFixed(3)}&emsp;speed_z:
+                      {value.speed.z.toFixed(3)}
+                    </span>
+                  )}
                 </li>
               );
             })}

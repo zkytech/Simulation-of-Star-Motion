@@ -78,12 +78,14 @@ export default class Index extends React.Component<IProps, IState> {
   /** 这些参数不需要状态树去管理，为了减少不必要的渲染，没有放进state里面 */
   canvas: HTMLCanvasElement | null = null;
   ctx: CanvasRenderingContext2D | null = null;
-  mainProcess: any;
+  mainProcess: any; // interval
   forceDict: ForceDict2D = {}; // 星体受力字典
-  stars: Star2D[] = [];
+  stars: Star2D[] = []; // 存储画面显示的所有star的列表
   sandboxStars: Star2D[] = []; // 沙盒模式星体数据
-  focousedStar: Star2D | null = null;
-  predictStars: Star2D[] = [];
+  focousedStar: Star2D | null = null; // 画面锁定的star
+  predictStars: Star2D[] = []; // 预测得到的star信息
+  tempStar: Star2D | null = null; // 沙盒编辑状态的临时star
+
   // 画布缩放拖动控制参数
   scale: number = 1;
   origin: DoubleCord = {
@@ -283,21 +285,7 @@ export default class Index extends React.Component<IProps, IState> {
     }
   };
 
-  exitSandboxtool = () => {
-    switch (this.sandboxToolMode) {
-      case 'add':
-        this.exitSandboxToolAddMode();
-        break;
-      case 'delete':
-        this.exitSandboxToolDeleteMode();
-        break;
-      case 'edit':
-        this.exitSandboxToolEditMode();
-        break;
-    }
-    this.sandboxToolMode = null;
-  };
-
+  /** 暂停 */
   pause = () => {
     if (this.mainProcess) {
       clearInterval(this.mainProcess);
@@ -546,6 +534,7 @@ export default class Index extends React.Component<IProps, IState> {
     this.move(event as MouseEvent);
   };
 
+  /** 用于暂停状态下刷新画布 */
   refreshCanvas = () => {
     this.clearCanvas();
     if (this.tempStar) {
@@ -606,7 +595,38 @@ export default class Index extends React.Component<IProps, IState> {
       this.focusOn(this.focousedStar.position);
     }
   };
-
+  /** 移除拖动&缩放控制事件 */
+  removeControlEvents = () => {
+    const canvas = this.canvas as HTMLCanvasElement;
+    const hammer = this.hammer as HammerManager;
+    canvas.removeEventListener('wheel', this.trackWheel);
+    canvas.removeEventListener('mousemove', this.move);
+    canvas.removeEventListener('mousedown', this.move);
+    canvas.removeEventListener('mouseup', this.move);
+    canvas.removeEventListener('mouseout', this.move);
+    hammer.off('panmove', this.panmoveHandler);
+    hammer.off('pinchin', this.pinchinHandler);
+    hammer.off('pinchout', this.pinchoutHandler);
+    hammer.off('pinchend', this.pinchendHandler);
+    hammer.off('panstart', this.panstartHandler);
+  };
+  /** 添加拖拽&缩放控制事件 */
+  addControlEvents = () => {
+    const canvas = this.canvas as HTMLCanvasElement;
+    const hammer = this.hammer as HammerManager;
+    // 监听鼠标滚轮进行缩放
+    canvas.addEventListener('wheel', this.trackWheel);
+    canvas.addEventListener('mousemove', this.move);
+    canvas.addEventListener('mousedown', this.move);
+    canvas.addEventListener('mouseup', this.move);
+    canvas.addEventListener('mouseout', this.move);
+    hammer.get('pinch').set({ enable: true });
+    hammer.on('pinchin', this.pinchinHandler);
+    hammer.on('pinchout', this.pinchoutHandler);
+    hammer.on('pinchend', this.pinchendHandler);
+    hammer.on('panstart', this.panstartHandler);
+    hammer.on('panmove', this.panmoveHandler);
+  };
   /** 组件加载完成后进行初始化动作 */
   componentDidMount() {
     if (this.props.canvasRef) {
@@ -616,7 +636,7 @@ export default class Index extends React.Component<IProps, IState> {
     const hammer = new Hammer(canvas);
     this.hammer = hammer;
 
-    // 监听鼠标滚轮进行缩放
+    // 监听鼠标事件进行缩放、拖拽
     this.addControlEvents();
     // 设置画布宽高
     canvas.height = document.documentElement.clientHeight - 5;
@@ -626,31 +646,31 @@ export default class Index extends React.Component<IProps, IState> {
     this.start();
   }
 
-  starResize = (e: WheelEvent | HammerInput) => {
-    const tempStar = this.tempStar as Star2D;
-    //@ts-ignore
-    if (e.clientX) {
-      // 鼠标事件
-      e = e as WheelEvent;
-      if (e.deltaY < 0) {
-        // 缩小
-        tempStar.setSize = tempStar.size * 1.05;
-      } else {
-        // 放大
-        tempStar.setSize = tempStar.size / 1.05;
-      }
-    } else {
-      // 触控事件
-      e = e as HammerInput;
-      tempStar.setSize = this.sandboxStarSize * e.scale;
+  /** 沙盒添加星体状态 */
+  sandboxtoolAddMode = (size: number) => {
+    if (!this.paused) {
+      // 暂停画面
+      this.pause();
     }
+    this.exitSandboxtool();
+    // 首先取消对拖动相关事件的监听
+    // 注意这里做的所有操作全部要在start()函数中做反向操作
 
-    // 刷新画布
-    this.refreshCanvas();
+    this.removeControlEvents();
+    this.sandboxToolMode = 'add';
+    // 添加自身的事件监听
+    const canvas = this.canvas as HTMLCanvasElement;
+    canvas.addEventListener('mousedown', this.sandboxtoolAddStar);
+    canvas.addEventListener('mouseup', this.sandboxtoolAddStarFinish);
+    // 触控较为特殊，移动事件的监听必须在这里开始
+    canvas.addEventListener('touchstart', this.sandboxtoolAddStar);
+    canvas.addEventListener('touchend', this.sandboxtoolAddStarFinish);
+
+    // 初始化箭头列表
+    this.sandboxStarSize = size;
   };
-
-  tempStar: Star2D | null = null;
-  addStarToSandbox = (e: MouseEvent | TouchEvent) => {
+  /** 点击左键，在鼠标位置添加一个星体 */
+  sandboxtoolAddStar = (e: MouseEvent | TouchEvent) => {
     // 获取画布坐标
 
     // @ts-ignore
@@ -685,15 +705,38 @@ export default class Index extends React.Component<IProps, IState> {
     // 初始化速度、鼠标位置
     this.addStarSpeed = { x: 0, y: 0 };
     this.addStarMousePosition = { x, y };
-    canvas.addEventListener('mousemove', this.setStarSpeed); // 这个事件会在addStarFinish里面被注销
-    canvas.addEventListener('touchmove', this.setStarSpeed);
+    canvas.addEventListener('mousemove', this.sandboxtoolSetSpeed); // 这个事件会在addStarFinish里面被注销
+    canvas.addEventListener('touchmove', this.sandboxtoolSetSpeed);
     canvas.addEventListener('wheel', this.starResize); // 这个事件会在addStarFinish里面被注销
   };
   addStarSpeed: Vector2 = { x: 0, y: 0 };
   addStarMousePosition = { x: 0, y: 0 };
   addStarArrows: string[] = [];
-  /**设置星体速度 */
-  setStarSpeed = (e: MouseEvent | TouchEvent) => {
+  /** 转动鼠标滚轮，调整star大小 */
+  starResize = (e: WheelEvent | HammerInput) => {
+    const tempStar = this.tempStar as Star2D;
+    //@ts-ignore
+    if (e.clientX) {
+      // 鼠标事件
+      e = e as WheelEvent;
+      if (e.deltaY < 0) {
+        // 缩小
+        tempStar.setSize = tempStar.size * 1.05;
+      } else {
+        // 放大
+        tempStar.setSize = tempStar.size / 1.05;
+      }
+    } else {
+      // 触控事件
+      e = e as HammerInput;
+      tempStar.setSize = this.sandboxStarSize * e.scale;
+    }
+
+    // 刷新画布
+    this.refreshCanvas();
+  };
+  /** 拖动鼠标设置星体速度 */
+  sandboxtoolSetSpeed = (e: MouseEvent | TouchEvent) => {
     // 获取画布坐标
     const x = this.zoomedX_INV(
       // @ts-ignore
@@ -722,7 +765,8 @@ export default class Index extends React.Component<IProps, IState> {
     this.refreshCanvas();
   };
 
-  addStarFinish = (e: MouseEvent | TouchEvent) => {
+  /** 左键抬起，完成添加星体 */
+  sandboxtoolAddStarFinish = (e: MouseEvent | TouchEvent) => {
     const canvas = this.canvas as HTMLCanvasElement;
     const hammer = new Hammer(canvas);
     // 移除鼠标移动事件
@@ -737,74 +781,19 @@ export default class Index extends React.Component<IProps, IState> {
     // 保存箭头信息
     this.addStarArrows.push(tempStar.id);
     this.tempStar = null;
-    canvas.removeEventListener('mousemove', this.setStarSpeed);
+    canvas.removeEventListener('mousemove', this.sandboxtoolSetSpeed);
     canvas.removeEventListener('wheel', this.starResize);
-    canvas.removeEventListener('touchmove', this.setStarSpeed);
-  };
-  /** 移除控制拖动、缩放的事件 */
-  removeControlEvents = () => {
-    const canvas = this.canvas as HTMLCanvasElement;
-    const hammer = this.hammer as HammerManager;
-    canvas.removeEventListener('wheel', this.trackWheel);
-    canvas.removeEventListener('mousemove', this.move);
-    canvas.removeEventListener('mousedown', this.move);
-    canvas.removeEventListener('mouseup', this.move);
-    canvas.removeEventListener('mouseout', this.move);
-    hammer.off('panmove', this.panmoveHandler);
-    hammer.off('pinchin', this.pinchinHandler);
-    hammer.off('pinchout', this.pinchoutHandler);
-    hammer.off('pinchend', this.pinchendHandler);
-    hammer.off('panstart', this.panstartHandler);
+    canvas.removeEventListener('touchmove', this.sandboxtoolSetSpeed);
   };
 
-  addControlEvents = () => {
-    const canvas = this.canvas as HTMLCanvasElement;
-    const hammer = this.hammer as HammerManager;
-    // 监听鼠标滚轮进行缩放
-    canvas.addEventListener('wheel', this.trackWheel);
-    canvas.addEventListener('mousemove', this.move);
-    canvas.addEventListener('mousedown', this.move);
-    canvas.addEventListener('mouseup', this.move);
-    canvas.addEventListener('mouseout', this.move);
-    hammer.get('pinch').set({ enable: true });
-    hammer.on('pinchin', this.pinchinHandler);
-    hammer.on('pinchout', this.pinchoutHandler);
-    hammer.on('pinchend', this.pinchendHandler);
-    hammer.on('panstart', this.panstartHandler);
-    hammer.on('panmove', this.panmoveHandler);
-  };
-
-  /** 沙盒添加星体状态 */
-  sandboxToolAddMode = (size: number) => {
-    if (!this.paused) {
-      // 暂停画面
-      this.pause();
-    }
-    this.exitSandboxtool();
-    // 首先取消对拖动相关事件的监听
-    // 注意这里做的所有操作全部要在start()函数中做反向操作
-
-    this.removeControlEvents();
-    this.sandboxToolMode = 'add';
-    // 添加自身的事件监听
-    const canvas = this.canvas as HTMLCanvasElement;
-    canvas.addEventListener('mousedown', this.addStarToSandbox);
-    canvas.addEventListener('mouseup', this.addStarFinish);
-    // 触控较为特殊，移动事件的监听必须在这里开始
-    canvas.addEventListener('touchstart', this.addStarToSandbox);
-    canvas.addEventListener('touchend', this.addStarFinish);
-
-    // 初始化箭头列表
-    this.sandboxStarSize = size;
-  };
   /** 退出添加星体状态 */
-  exitSandboxToolAddMode = () => {
+  exitSandboxtoolAddMode = () => {
     if (this.sandboxToolMode === 'add') {
       const canvas = this.canvas as HTMLCanvasElement;
-      canvas.removeEventListener('mousedown', this.addStarToSandbox);
-      canvas.removeEventListener('mouseup', this.addStarFinish);
-      canvas.removeEventListener('touchstart', this.addStarToSandbox);
-      canvas.removeEventListener('touchend', this.addStarFinish);
+      canvas.removeEventListener('mousedown', this.sandboxtoolAddStar);
+      canvas.removeEventListener('mouseup', this.sandboxtoolAddStarFinish);
+      canvas.removeEventListener('touchstart', this.sandboxtoolAddStar);
+      canvas.removeEventListener('touchend', this.sandboxtoolAddStarFinish);
       this.addControlEvents();
       this.sandboxToolMode = null;
     }
@@ -812,27 +801,28 @@ export default class Index extends React.Component<IProps, IState> {
 
   sandboxStarSize = 10;
   /** 删除星体 */
-  sandboxDeleteStarMode = () => {
+  sandboxtoolDeleteStarMode = () => {
     if (!this.paused) {
       this.pause();
     }
     this.exitSandboxtool();
     this.removeControlEvents();
     const canvas = this.canvas as HTMLCanvasElement;
-    canvas.addEventListener('mousedown', this.sandboxDeleteStar);
+    canvas.addEventListener('mousedown', this.sandboxtoolDeleteStar);
     this.sandboxToolMode = 'delete';
   };
-
-  exitSandboxToolDeleteMode = () => {
+  /** 退出删除星体模式 */
+  exitSandboxtoolDeleteMode = () => {
     if (this.sandboxToolMode === 'delete') {
       const canvas = this.canvas as HTMLCanvasElement;
-      canvas.removeEventListener('mousedown', this.sandboxDeleteStar);
+      canvas.removeEventListener('mousedown', this.sandboxtoolDeleteStar);
       this.addControlEvents();
       this.sandboxToolMode = null;
     }
   };
 
-  sandboxDeleteStar = (e: MouseEvent) => {
+  /** 删除星体 */
+  sandboxtoolDeleteStar = (e: MouseEvent) => {
     const x = this.zoomedX_INV(e.clientX);
     const y = this.zoomedY_INV(e.clientY);
     this.stars = this.stars.filter(star => {
@@ -856,8 +846,8 @@ export default class Index extends React.Component<IProps, IState> {
     // 刷新画布
     this.refreshCanvas();
   };
-  /** 编辑星体 */
-  sandboxEditMode = () => {
+  /** 编辑星体模式 */
+  sandboxtoolEditMode = () => {
     if (!this.paused) {
       // 暂停画面
       this.pause();
@@ -865,7 +855,7 @@ export default class Index extends React.Component<IProps, IState> {
     this.exitSandboxtool();
     this.removeControlEvents();
     const canvas = this.canvas as HTMLCanvasElement;
-    canvas.addEventListener('click', this.sandboxEditStar);
+    canvas.addEventListener('click', this.sandboxtoolEditStar);
     this.sandboxToolMode = 'edit';
   };
 
@@ -873,13 +863,13 @@ export default class Index extends React.Component<IProps, IState> {
   exitSandboxToolEditMode = () => {
     if (this.sandboxToolMode === 'edit') {
       const canvas = this.canvas as HTMLCanvasElement;
-      canvas.removeEventListener('click', this.sandboxEditStar);
+      canvas.removeEventListener('click', this.sandboxtoolEditStar);
       this.addControlEvents();
       this.sandboxToolMode = null;
     }
   };
-
-  sandboxEditStar = (e: MouseEvent) => {
+  /** 编辑星体 */
+  sandboxtoolEditStar = (e: MouseEvent) => {
     const x = this.zoomedX_INV(e.clientX);
     const y = this.zoomedY_INV(e.clientY);
     const star = this.findStarByPosition({ x, y });
@@ -897,6 +887,22 @@ export default class Index extends React.Component<IProps, IState> {
     });
     return target;
   };
+  /** 退出sandboxtool编辑状态 */
+  exitSandboxtool = () => {
+    switch (this.sandboxToolMode) {
+      case 'add':
+        this.exitSandboxtoolAddMode();
+        break;
+      case 'delete':
+        this.exitSandboxtoolDeleteMode();
+        break;
+      case 'edit':
+        this.exitSandboxToolEditMode();
+        break;
+    }
+    this.sandboxToolMode = null;
+  };
+
   /** 将编辑的信息应用到stars数组 */
   applyEditStar = (star: Star2D) => {
     this.stars = this.stars.map(value => {
@@ -951,7 +957,7 @@ export default class Index extends React.Component<IProps, IState> {
               className={style.sandbox_star}
               onClick={() => {
                 this.setState({ selectedKey: 0 });
-                this.sandboxToolAddMode(25);
+                this.sandboxtoolAddMode(25);
               }}
               style={{
                 height: '50px',
@@ -968,7 +974,7 @@ export default class Index extends React.Component<IProps, IState> {
             <span
               onClick={() => {
                 this.setState({ selectedKey: 1 });
-                this.sandboxToolAddMode(15);
+                this.sandboxtoolAddMode(15);
               }}
               className={style.sandbox_star}
               style={{ height: '30px', width: '30px' }}
@@ -982,7 +988,7 @@ export default class Index extends React.Component<IProps, IState> {
             <span
               onClick={() => {
                 this.setState({ selectedKey: 2 });
-                this.sandboxToolAddMode(5);
+                this.sandboxtoolAddMode(5);
               }}
               className={style.sandbox_star}
               style={{ height: '10px', width: '10px' }}
@@ -994,14 +1000,16 @@ export default class Index extends React.Component<IProps, IState> {
             }
           >
             {/* 编辑按钮 */}
-            <Icon
-              type="edit"
-              className={style.sandbox_tools_icon}
-              onClick={() => {
-                this.setState({ selectedKey: 3 });
-                this.sandboxEditMode();
-              }}
-            />
+            <Tooltip title="编辑">
+              <Icon
+                type="edit"
+                className={style.sandbox_tools_icon}
+                onClick={() => {
+                  this.setState({ selectedKey: 3 });
+                  this.sandboxtoolEditMode();
+                }}
+              />
+            </Tooltip>
           </li>
           <li
             className={
@@ -1009,14 +1017,16 @@ export default class Index extends React.Component<IProps, IState> {
             }
           >
             {/* 删除按钮 */}
-            <Icon
-              type="delete"
-              className={style.sandbox_tools_icon}
-              onClick={() => {
-                this.setState({ selectedKey: 5 });
-                this.sandboxDeleteStarMode();
-              }}
-            />
+            <Tooltip title="删除">
+              <Icon
+                type="delete"
+                className={style.sandbox_tools_icon}
+                onClick={() => {
+                  this.setState({ selectedKey: 5 });
+                  this.sandboxtoolDeleteStarMode();
+                }}
+              />
+            </Tooltip>
           </li>
           <li
             className={
@@ -1024,53 +1034,62 @@ export default class Index extends React.Component<IProps, IState> {
             }
           >
             {/* 拖动按钮 */}
-            <Icon
-              type="drag"
-              className={style.sandbox_tools_icon}
-              onClick={() => {
-                this.setState({ selectedKey: 6 });
-                this.exitSandboxtool();
-              }}
-            />
+            <Tooltip title="移动视野">
+              <Icon
+                type="drag"
+                className={style.sandbox_tools_icon}
+                onClick={() => {
+                  this.setState({ selectedKey: 6 });
+                  this.exitSandboxtool();
+                }}
+              />
+            </Tooltip>
           </li>
           <li>
             {/* 暂停/开始 */}
-            <Icon
-              type={this.paused ? 'caret-right' : 'pause'}
-              className={style.sandbox_tools_icon}
-              onClick={() => {
-                this.setState({ selectedKey: -1 });
-                if (this.paused) {
-                  this.start(false);
-                } else {
-                  this.pause();
-                }
-                this.forceUpdate();
-              }}
-            />
+            <Tooltip title={this.paused ? '开始' : '暂停'}>
+              <Icon
+                type={this.paused ? 'caret-right' : 'pause'}
+                className={style.sandbox_tools_icon}
+                onClick={() => {
+                  this.setState({ selectedKey: -1 });
+                  if (this.paused) {
+                    this.start(false);
+                  } else {
+                    this.pause();
+                  }
+                  this.forceUpdate();
+                }}
+              />
+            </Tooltip>
           </li>
           <li>
             {/* 重置按钮   */}
-            <Icon
-              type="undo"
-              className={style.sandbox_tools_icon}
-              onClick={() => {
-                this.pause();
-                this.stars = this.sandboxStars.map(star => star.clone());
-                this.forceUpdate();
-              }}
-            />
+            <Tooltip title={'重置沙盒状态'}>
+              <Icon
+                type="undo"
+                className={style.sandbox_tools_icon}
+                onClick={() => {
+                  this.pause();
+                  this.stars = this.sandboxStars.map(star => star.clone());
+                  this.forceUpdate();
+                }}
+              />
+            </Tooltip>
           </li>
           <li>
             {/* 保存按钮 */}
-            <Icon
-              type="save"
-              className={style.sandbox_tools_icon}
-              onClick={() => this.props.saveData(this.stars)}
-            />
+            <Tooltip title="保存沙盒数据">
+              <Icon
+                type="save"
+                className={style.sandbox_tools_icon}
+                onClick={() => this.props.saveData(this.stars)}
+              />
+            </Tooltip>
           </li>
           <li>
             {/* 导入按钮 */}
+
             <Upload
               beforeUpload={(file: File, fileList: any[]): false => {
                 const fileReader = new FileReader();
@@ -1087,7 +1106,9 @@ export default class Index extends React.Component<IProps, IState> {
               style={{ marginLeft: '10px' }}
               accept={'.json'}
             >
-              <Icon type="upload" className={style.sandbox_tools_icon} />
+              <Tooltip title="导入沙盒数据">
+                <Icon type="upload" className={style.sandbox_tools_icon} />
+              </Tooltip>
             </Upload>
           </li>
           <li>
@@ -1115,7 +1136,12 @@ export default class Index extends React.Component<IProps, IState> {
         >
           {this.stars
             .sort((value1, value2) => value2.size - value1.size)
-            .slice(0, 13)
+            .slice(
+              0,
+              window.innerWidth < 1000
+                ? Math.floor((window.innerHeight - 150) / 30)
+                : Math.floor((window.innerHeight - 100) / 70)
+            )
             .map((value, index) => {
               if (index === 0) {
                 this.largestStar = value;
@@ -1140,7 +1166,7 @@ export default class Index extends React.Component<IProps, IState> {
                   }}
                   style={{
                     background: focoused ? 'RGBA(255,255,255,0.3)' : undefined,
-                    height: window.innerWidth < 1000 ? '30px' : undefined,
+                    height: window.innerWidth < 1000 ? '30px' : '65px',
                     width: window.innerWidth < 1000 ? '50px' : undefined
                   }}
                 >
@@ -1160,6 +1186,7 @@ export default class Index extends React.Component<IProps, IState> {
             })}
         </ul>
         {this.state.editPanelVisible ? (
+          /** 编辑星体的面板（可拖拽） */
           <Rnd
             default={{
               x: isPC()
@@ -1191,6 +1218,7 @@ export default class Index extends React.Component<IProps, IState> {
             if (this.state.focousOnLargest) {
               this.setState({ focousOnLargest: false });
             } else {
+              this.focousedStar = null;
               this.setState({ focousOnLargest: true });
             }
           }}
@@ -1212,17 +1240,6 @@ export default class Index extends React.Component<IProps, IState> {
         >
           重置视野
         </Button>
-        {/* <Button
-          onClick={() => {
-            this.hideStatus = !this.hideStatus;
-            this.forceUpdate();
-          }}
-          type={'ghost'}
-          className={style.status_button}
-          hidden={window.screen.width > 720}
-        >
-          {this.hideStatus ? '显示状态信息' : '隐藏状态信息'}
-        </Button> */}
       </div>
     );
   }
