@@ -315,8 +315,10 @@ export default class Index extends React.Component<IProps, IState> {
     this.createCenterLight();
     // renderer
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setSize(window.innerWidth - 3, window.innerHeight - 5);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.domElement.style.setProperty('display', 'block');
     //@ts-ignore
+
     this.refs.container.appendChild(this.renderer.domElement);
     // TODO:沙盒模式控制器应该修改为flyControls
     // 控制器，用于控制视角
@@ -353,7 +355,7 @@ export default class Index extends React.Component<IProps, IState> {
   onWindowResize = () => {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth - 3, window.innerHeight - 5);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     //@ts-ignore
     this.controls.handleResize();
     this.renderGL();

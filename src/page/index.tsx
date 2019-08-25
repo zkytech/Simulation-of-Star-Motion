@@ -369,6 +369,7 @@ const Index: FunctionComponent = () => {
         />
       </Modal>
       <Modal
+        style={{ top: 35 }}
         visible={phonePanelVisible}
         onCancel={() => {
           setPhonePanelVisible(false);
@@ -382,6 +383,19 @@ const Index: FunctionComponent = () => {
       >
         {getcontrolPanel(style.control_panel_phone)}
       </Modal>
+      {window.innerWidth > 1000 ? (
+        <div style={{ position: 'fixed', bottom: '2px', right: '10px' }}>
+          项目地址:
+          <a
+            href="https://github.com/zkytech/Simulation-of-Star-Motion"
+            target="_blank"
+          >
+            https://github.com/zkytech/Simulation-of-Star-Motion
+          </a>
+        </div>
+      ) : (
+        ''
+      )}
     </div>
   );
 };

@@ -297,7 +297,7 @@ export default class Index extends React.Component<IProps, IState> {
 
   clearCanvas = () => {
     const canvas = this.canvas as HTMLCanvasElement;
-    canvas.height = window.innerHeight - 5;
+    canvas.height = window.innerHeight;
     canvas.width = window.innerWidth;
   };
 
@@ -927,6 +927,7 @@ export default class Index extends React.Component<IProps, IState> {
           ref={ref => (this.canvas = ref)}
           style={{
             backgroundColor: 'black',
+            display: 'block',
             cursor:
               this.sandboxToolMode === 'add' ||
               this.sandboxToolMode === 'delete'
