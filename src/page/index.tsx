@@ -12,6 +12,8 @@ import style from './style.module.less';
 import Canvas3D from './component/3d';
 import Canvas2D from './component/2d';
 import AddStar from './component/addStar';
+import { Star2D } from './component/star';
+import { saveAsJson } from './component/utils';
 
 const { Panel } = Collapse;
 
@@ -34,6 +36,26 @@ const Index: FunctionComponent = () => {
   const [step, setStep] = useState(1); // 步长，步长越小，计算精度越高
   const [phonePanelVisible, setPhonePanelVisible] = useState(false); // 手机版的控制面板是否可见
   const [disableCenter, setDisableCenter] = useState(true); // 是否禁用中心天体
+  const saveData = (stars: Star2D[]) => {
+    saveAsJson(
+      {
+        stars: stars.map(star => star.sandboxData),
+        params: { g, disableCenter, centerSize, step, mergeMode }
+      },
+      `${new Date().toDateString()}星体数据.json`
+    );
+  };
+  const loadData = (data: ExportData) => {
+    setSandboxMode(true);
+    console.log('indexLoadData', data);
+    setSandboxData(data.stars);
+    setCenterSize(data.params.centerSize);
+    setDisableCenter(data.params.disableCenter);
+    setG(data.params.g);
+    setStep(data.params.step);
+    setMergeMode(data.params.mergeMode);
+  };
+
   const getcontrolPanel = (className?: string) => {
     return (
       <div className={className}>
@@ -45,7 +67,7 @@ const Index: FunctionComponent = () => {
               onChange={checked => {
                 setMode(checked ? '3d' : '2d');
                 if (checked) {
-                  setStarNum(100);
+                  setStarNum(30);
                   setG(300);
                   setTravelLength(100);
                   setShowId(false);
@@ -206,18 +228,28 @@ const Index: FunctionComponent = () => {
             </Button>
           </li>
           <li>
-            <Button
-              onClick={() => {
-                //@ts-ignore
-                ref.pause();
-                setPaused(true);
-                setModalVisble(true);
-              }}
-              type={'primary'}
-              style={{ marginRight: '10px' }}
-            >
-              沙盒
-            </Button>
+            {!sandboxMode || mode === '3d' ? (
+              <Button
+                onClick={() => {
+                  //@ts-ignore
+                  ref.pause();
+                  setPaused(true);
+                  if (mode === '2d') {
+                    setSandboxMode(true);
+                    setPhonePanelVisible(false);
+                    return;
+                  }
+                  setModalVisble(true);
+                }}
+                type={'primary'}
+                style={{ marginRight: '10px' }}
+              >
+                沙盒
+              </Button>
+            ) : (
+              ''
+            )}
+
             {sandboxMode ? (
               <Button
                 onClick={() => {
@@ -260,6 +292,9 @@ const Index: FunctionComponent = () => {
           sandboxMode={sandboxMode}
           step={step}
           disableCenter={disableCenter}
+          onPause={() => setPaused(true)}
+          saveData={saveData}
+          loadData={loadData}
         />
       ) : (
         <Canvas3D

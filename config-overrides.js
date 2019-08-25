@@ -12,10 +12,13 @@ const setGlobalObject = value => config => {
   return config
 }
 const addWebpackExternals = (externalDeps) => config => {
-  config.externals = {
-    ...config.externals,
-    ...externalDeps
-  };
+  if (config.mode === "production") {
+    config.externals = {
+      ...config.externals,
+      ...externalDeps
+    };
+  }
+
   return config;
 };
 

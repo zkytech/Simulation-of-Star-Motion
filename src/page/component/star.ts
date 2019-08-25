@@ -1,4 +1,4 @@
-import { randomRGB, randomColor, deepCopy, makeTextSprite } from './utils';
+import { randomColor, deepCopy, makeTextSprite } from './utils';
 import * as THREE from 'three';
 class Star {
   constructor(params: {
@@ -39,7 +39,15 @@ class Star2D extends Star {
   constructor(params: StarInfo2D) {
     super(params);
   }
-
+  clone = () => {
+    return new Star2D({
+      id: this.id,
+      speed: deepCopy(this.speed),
+      position: deepCopy(this.position),
+      color: this.color,
+      size: this.size
+    });
+  };
   /** 生成随机实例 */
   public static ofRandom = (param: RandomStarGeneratorParam) => {
     const height = 800;
@@ -48,7 +56,7 @@ class Star2D extends Star {
     const sizeRange = param.sizeRange.sort();
     const speedRange = param.speedRange.sort();
     const size = Math.random() * (sizeRange[1] - sizeRange[0]) + sizeRange[0];
-    const color = randomRGB();
+    const color = randomColor();
     const position = {
       x:
         Math.random() * width * (Math.random() > 0.5 ? 1 : -1) +
@@ -75,6 +83,14 @@ class Star2D extends Star {
       speed
     });
   };
+  get sandboxData(): SandboxData {
+    return {
+      position: deepCopy(this.position),
+      speed: deepCopy(this.speed),
+      color: this.color,
+      size: this.size
+    };
+  }
 
   travel = [] as Vector2[];
   /**
@@ -120,7 +136,7 @@ class Star2D extends Star {
    * @param showID 是否显示id
    */
 
-  private drawArc = (
+  drawArc = (
     showID: boolean,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions
@@ -151,11 +167,15 @@ class Star2D extends Star {
    * 绘制尾迹
    * @param travelLength 尾迹长度
    */
-  private drawTravel = (
+  drawTravel = (
     travelLength: number,
     ctx: CanvasRenderingContext2D,
-    zoom: ZoomFunctions
+    zoom: ZoomFunctions,
+    predict: boolean = false
   ) => {
+    if (travelLength === 0) {
+      this.travel = [];
+    }
     // 剪切尾迹
     this.travel = this.travel.slice(-travelLength);
     // 开始绘制
@@ -166,6 +186,9 @@ class Star2D extends Star {
         ctx.lineTo(zoom.zoomedX(value.x), zoom.zoomedY(value.y));
       }
     });
+    if(predict){
+      ctx.setLineDash([10])
+    }
     ctx.lineWidth = zoom.zoomed(1);
     ctx.strokeStyle = this.color;
     ctx.stroke();
@@ -336,6 +359,7 @@ class Star3D extends Star {
   /** 移动线条 */
   moveLines = (travelLength: number) => {
     // 保证travel数组的长度没有超过规定值
+
     this.travel = this.travel.slice(-travelLength);
     const travel = this.travel;
     const lines = this.lines;

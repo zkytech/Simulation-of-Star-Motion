@@ -1,15 +1,5 @@
 import * as THREE from 'three';
 import { saveAs } from 'file-saver';
-/**
- * 生成随机RGB颜色
- */
-export const randomRGB = () => {
-  const r = Math.floor(Math.random() * 256);
-  const g = Math.floor(Math.random() * 256);
-  const b = Math.floor(Math.random() * 256);
-  const rgb = 'RGB(' + r + ',' + g + ',' + b + ')';
-  return rgb;
-};
 
 export const randomColor = () => {
   //颜色字符串
@@ -192,4 +182,52 @@ export const isPC = () => {
     }
   }
   return flag;
+};
+
+export const drawArrow = (
+  ctx: CanvasRenderingContext2D,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  theta: number,
+  headlen: number,
+  width: number,
+  color: string
+) => {
+  theta = theta || 30;
+  headlen = headlen || 10;
+  width = width || 1;
+  color = color || '#000';
+  const angle = (Math.atan2(fromY - toY, fromX - toX) * 180) / Math.PI;
+  const angle1 = ((angle + theta) * Math.PI) / 180;
+  const angle2 = ((angle - theta) * Math.PI) / 180;
+  const topX = headlen * Math.cos(angle1);
+  const topY = headlen * Math.sin(angle1);
+  const botX = headlen * Math.cos(angle2);
+  const botY = headlen * Math.sin(angle2);
+  ctx.save();
+  ctx.beginPath();
+  let arrowX, arrowY;
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  arrowX = toX + topX;
+  arrowY = toY + topY;
+  ctx.moveTo(arrowX, arrowY);
+  ctx.lineTo(toX, toY);
+  arrowX = toX + botX;
+  arrowY = toY + botY;
+  ctx.lineTo(arrowX, arrowY);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke();
+  ctx.restore();
+};
+
+/** 计算二维坐标点之间的距离 */
+export const calcDistanceOnVec2 = (point1: Vector2, point2: Vector2) => {
+  return Math.pow(
+    Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2),
+    0.5
+  );
 };

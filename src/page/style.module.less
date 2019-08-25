@@ -38,7 +38,7 @@
   list-style: none;
   width: 150px;
   position: fixed;
-  top: 20px;
+  top: 50px;
   left: 5px;
   background-color: inherit;
   padding: 0;
@@ -117,4 +117,107 @@
 .dynamic-delete-button[disabled] {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.sandbox_tools {
+  list-style: none;
+  position: fixed;
+  top: 10px;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.2);
+  height: 60px;
+  padding-left: 0;
+  border-radius: 5px;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.6);
+}
+
+@media screen and (min-width: 700px) {
+  .sandbox_tools {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .sandbox_tools {
+    left: 2px;
+  }
+
+}
+
+.sandbox_tools>li {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  height: 60px;
+  width: 50px;
+}
+
+.sandbox_star {
+  background-color: gray;
+  border-radius: 50%;
+  transition-duration: 0.3s;
+  display: inline-block;
+  margin: 0 10px;
+}
+
+.sandbox_star:hover {
+  transition-duration: 0.3s;
+  transform: scale(1.2);
+  cursor: pointer
+}
+
+.sandbox_tools_info {
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.sandbox_tools_icon {
+  font-size: 50px;
+  cursor: pointer;
+  transition-duration: 0.3s;
+}
+
+.sandbox_tools_icon:hover {
+  transition-duration: 0.3s;
+  transform: scale(1.2);
+}
+
+.sandbox_tools_selected {
+  border-bottom: solid 5px gray
+}
+
+.edit_star_panel {
+  list-style: none;
+  padding-left: 0;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+
+.rnd_panel {
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+  padding: 10px;
+}
+
+.edit_star_panel>li {
+  margin-top: 10px;
+  margin-bottom: 10px
+}
+
+.edit_star_panel_id {
+  font-size: 30px;
+}
+
+.edit_star_panel_vect {
+  height: 70px;
+  border-bottom: solid 1px rgba(0, 0, 0, 0.2)
+}
+
+.edit_star_panel_vect>span {
+  font-size: 18px;
+  display: inline-block;
+  margin-bottom: 5px
 }
