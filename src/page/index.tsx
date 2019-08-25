@@ -385,7 +385,7 @@ const Index: FunctionComponent = () => {
       </Modal>
       {window.innerWidth > 1000 ? (
         <div style={{ position: 'fixed', bottom: '2px', right: '10px' }}>
-          项目地址:
+          <span style={{ color: 'white' }}>源码</span>
           <a
             href="https://github.com/zkytech/Simulation-of-Star-Motion"
             target="_blank"
