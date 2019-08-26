@@ -593,7 +593,6 @@ export default class Index extends React.Component<IProps, IState> {
         true
       );
     });
-
     // 移动视角到focousedStar
     if (this.focousedStar) {
       this.focusOn(this.focousedStar.position);
@@ -917,6 +916,16 @@ export default class Index extends React.Component<IProps, IState> {
     this.predictTravel();
     this.refreshCanvas();
   };
+
+  resetSandbox = ()=>{
+    this.pause();
+    this.stars = this.sandboxStars.map(star => star.clone());
+    this.focousedStar = null
+    this.setState({focousOnLargest:false})
+    this.forceUpdate();
+    this.refreshCanvas()
+  }
+
   hideStatus = true;
   largestStar: Star2D | null = null;
   public render() {
@@ -1127,22 +1136,14 @@ export default class Index extends React.Component<IProps, IState> {
                 <Icon
                   type="undo"
                   className={style.sandbox_tools_icon}
-                  onClick={() => {
-                    this.pause();
-                    this.stars = this.sandboxStars.map(star => star.clone());
-                    this.forceUpdate();
-                  }}
+                  onClick={this.resetSandbox}
                 />
               </Tooltip>
             ) : (
               <Icon
                 type="undo"
                 className={style.sandbox_tools_icon}
-                onClick={() => {
-                  this.pause();
-                  this.stars = this.sandboxStars.map(star => star.clone());
-                  this.forceUpdate();
-                }}
+                onClick={this.resetSandbox}
               />
             )}
           </li>
