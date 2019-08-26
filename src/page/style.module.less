@@ -36,7 +36,7 @@
 
 .info_panel {
   list-style: none;
-  width: 150px;
+  width: auto;
   position: fixed;
   top: 50px;
   left: 5px;
@@ -56,21 +56,30 @@
 .info_panel>li {
   border: solid;
   border-width: 1px;
-  width: 100%;
   background-color: black;
   border-radius: 10px;
   margin: 2px;
   box-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
-  cursor: default
+  cursor: pointer;
 }
 
-.speed_info {
-  position: relative;
-  display: block;
-  bottom: 20px;
-  left: 50px;
-  color: white;
+@media screen and (min-width:1000px) {
+  .info_panel>li {
+    width: 150px;
+  }
+
+  .speed_info {
+    position: relative;
+    display: block;
+    bottom: 20px;
+    left: 50px;
+    color: white;
+    width: 100px;
+    margin: 0
+  }
 }
+
+
 
 .reset_button {
   position: fixed;

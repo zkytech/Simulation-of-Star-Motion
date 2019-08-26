@@ -1,7 +1,7 @@
 /** 2D模型 */
 import * as React from 'react';
 import style from '../style.module.less';
-import { Button, Icon, Tooltip, Modal, Upload } from 'antd';
+import { Button, Icon, Tooltip, Upload } from 'antd';
 import { deepCopy, isPC, drawArrow, calcDistanceOnVec2 } from './utils';
 import Hammer from 'hammerjs';
 import { Star2D } from './star';
@@ -85,7 +85,7 @@ export default class Index extends React.Component<IProps, IState> {
   focousedStar: Star2D | null = null; // 画面锁定的star
   predictStars: Star2D[] = []; // 预测得到的star信息
   tempStar: Star2D | null = null; // 沙盒编辑状态的临时star
-
+  pixelRatio = window.devicePixelRatio;
   // 画布缩放拖动控制参数
   scale: number = 1;
   origin: DoubleCord = {
@@ -297,8 +297,12 @@ export default class Index extends React.Component<IProps, IState> {
 
   clearCanvas = () => {
     const canvas = this.canvas as HTMLCanvasElement;
-    canvas.height = window.innerHeight;
-    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight * this.pixelRatio;
+    canvas.width = window.innerWidth * this.pixelRatio;
+    (this.ctx as CanvasRenderingContext2D).scale(
+      this.pixelRatio,
+      this.pixelRatio
+    );
   };
 
   /** 开始绘制 */
@@ -638,9 +642,6 @@ export default class Index extends React.Component<IProps, IState> {
 
     // 监听鼠标事件进行缩放、拖拽
     this.addControlEvents();
-    // 设置画布宽高
-    canvas.height = document.documentElement.clientHeight - 5;
-    canvas.width = document.body.clientWidth;
     this.ctx = canvas.getContext('2d');
     // 开始绘制
     this.start();
@@ -701,7 +702,6 @@ export default class Index extends React.Component<IProps, IState> {
     );
     this.tempStar = star;
     const canvas = this.canvas as HTMLCanvasElement;
-    const hammer = new Hammer(canvas);
     // 初始化速度、鼠标位置
     this.addStarSpeed = { x: 0, y: 0 };
     this.addStarMousePosition = { x, y };
@@ -768,7 +768,6 @@ export default class Index extends React.Component<IProps, IState> {
   /** 左键抬起，完成添加星体 */
   sandboxtoolAddStarFinish = (e: MouseEvent | TouchEvent) => {
     const canvas = this.canvas as HTMLCanvasElement;
-    const hammer = new Hammer(canvas);
     // 移除鼠标移动事件
     const tempStar = this.tempStar as Star2D;
     // 设置速度
@@ -922,7 +921,13 @@ export default class Index extends React.Component<IProps, IState> {
   largestStar: Star2D | null = null;
   public render() {
     return (
-      <div>
+      <div
+        style={{
+          height: window.innerHeight,
+          width: window.innerWidth,
+          overflow: 'hidden'
+        }}
+      >
         <canvas
           ref={ref => (this.canvas = ref)}
           style={{
@@ -932,7 +937,9 @@ export default class Index extends React.Component<IProps, IState> {
               this.sandboxToolMode === 'add' ||
               this.sandboxToolMode === 'delete'
                 ? 'crosshair'
-                : 'move'
+                : 'move',
+            transform: `scale(${1 / this.pixelRatio})`,
+            transformOrigin: '0 0'
           }}
         />
         {/* 沙盒编辑器 */}
@@ -1001,7 +1008,18 @@ export default class Index extends React.Component<IProps, IState> {
             }
           >
             {/* 编辑按钮 */}
-            <Tooltip title="编辑">
+            {isPC() ? (
+              <Tooltip title="编辑">
+                <Icon
+                  type="edit"
+                  className={style.sandbox_tools_icon}
+                  onClick={() => {
+                    this.setState({ selectedKey: 3 });
+                    this.sandboxtoolEditMode();
+                  }}
+                />
+              </Tooltip>
+            ) : (
               <Icon
                 type="edit"
                 className={style.sandbox_tools_icon}
@@ -1010,7 +1028,7 @@ export default class Index extends React.Component<IProps, IState> {
                   this.sandboxtoolEditMode();
                 }}
               />
-            </Tooltip>
+            )}
           </li>
           <li
             className={
@@ -1018,7 +1036,18 @@ export default class Index extends React.Component<IProps, IState> {
             }
           >
             {/* 删除按钮 */}
-            <Tooltip title="删除">
+            {isPC() ? (
+              <Tooltip title="删除">
+                <Icon
+                  type="delete"
+                  className={style.sandbox_tools_icon}
+                  onClick={() => {
+                    this.setState({ selectedKey: 5 });
+                    this.sandboxtoolDeleteStarMode();
+                  }}
+                />
+              </Tooltip>
+            ) : (
               <Icon
                 type="delete"
                 className={style.sandbox_tools_icon}
@@ -1027,7 +1056,7 @@ export default class Index extends React.Component<IProps, IState> {
                   this.sandboxtoolDeleteStarMode();
                 }}
               />
-            </Tooltip>
+            )}
           </li>
           <li
             className={
@@ -1035,7 +1064,18 @@ export default class Index extends React.Component<IProps, IState> {
             }
           >
             {/* 拖动按钮 */}
-            <Tooltip title="移动视野">
+            {isPC() ? (
+              <Tooltip title="移动视野">
+                <Icon
+                  type="drag"
+                  className={style.sandbox_tools_icon}
+                  onClick={() => {
+                    this.setState({ selectedKey: 6 });
+                    this.exitSandboxtool();
+                  }}
+                />
+              </Tooltip>
+            ) : (
               <Icon
                 type="drag"
                 className={style.sandbox_tools_icon}
@@ -1044,11 +1084,27 @@ export default class Index extends React.Component<IProps, IState> {
                   this.exitSandboxtool();
                 }}
               />
-            </Tooltip>
+            )}
           </li>
           <li>
             {/* 暂停/开始 */}
-            <Tooltip title={this.paused ? '开始' : '暂停'}>
+            {isPC() ? (
+              <Tooltip title={this.paused ? '开始' : '暂停'}>
+                <Icon
+                  type={this.paused ? 'caret-right' : 'pause'}
+                  className={style.sandbox_tools_icon}
+                  onClick={() => {
+                    this.setState({ selectedKey: -1 });
+                    if (this.paused) {
+                      this.start(false);
+                    } else {
+                      this.pause();
+                    }
+                    this.forceUpdate();
+                  }}
+                />
+              </Tooltip>
+            ) : (
               <Icon
                 type={this.paused ? 'caret-right' : 'pause'}
                 className={style.sandbox_tools_icon}
@@ -1062,11 +1118,23 @@ export default class Index extends React.Component<IProps, IState> {
                   this.forceUpdate();
                 }}
               />
-            </Tooltip>
+            )}
           </li>
           <li>
             {/* 重置按钮   */}
-            <Tooltip title={'重置沙盒状态'}>
+            {isPC() ? (
+              <Tooltip title={'重置沙盒状态'}>
+                <Icon
+                  type="undo"
+                  className={style.sandbox_tools_icon}
+                  onClick={() => {
+                    this.pause();
+                    this.stars = this.sandboxStars.map(star => star.clone());
+                    this.forceUpdate();
+                  }}
+                />
+              </Tooltip>
+            ) : (
               <Icon
                 type="undo"
                 className={style.sandbox_tools_icon}
@@ -1076,17 +1144,25 @@ export default class Index extends React.Component<IProps, IState> {
                   this.forceUpdate();
                 }}
               />
-            </Tooltip>
+            )}
           </li>
           <li>
             {/* 保存按钮 */}
-            <Tooltip title="保存沙盒数据">
+            {isPC() ? (
+              <Tooltip title="保存沙盒数据">
+                <Icon
+                  type="save"
+                  className={style.sandbox_tools_icon}
+                  onClick={() => this.props.saveData(this.stars)}
+                />
+              </Tooltip>
+            ) : (
               <Icon
                 type="save"
                 className={style.sandbox_tools_icon}
                 onClick={() => this.props.saveData(this.stars)}
               />
-            </Tooltip>
+            )}
           </li>
           <li>
             {/* 导入按钮 */}
@@ -1107,9 +1183,13 @@ export default class Index extends React.Component<IProps, IState> {
               style={{ marginLeft: '10px' }}
               accept={'.json'}
             >
-              <Tooltip title="导入沙盒数据">
+              {isPC() ? (
+                <Tooltip title="导入沙盒数据">
+                  <Icon type="upload" className={style.sandbox_tools_icon} />
+                </Tooltip>
+              ) : (
                 <Icon type="upload" className={style.sandbox_tools_icon} />
-              </Tooltip>
+              )}
             </Upload>
           </li>
           <li>
@@ -1177,8 +1257,10 @@ export default class Index extends React.Component<IProps, IState> {
                   ) : (
                     <span className={style.speed_info}>
                       mass:{value.mass.toFixed(3)}
-                      &emsp; speed_x:
-                      {value.speed.x.toFixed(3)}&emsp;speed_y:
+                      <br /> speed_x:
+                      {value.speed.x.toFixed(3)}
+                      <br />
+                      speed_y:
                       {value.speed.y.toFixed(3)}
                     </span>
                   )}

@@ -155,7 +155,7 @@ export const makeTextSprite = (message: string, parameters?: SpriteParam) => {
 };
 
 export const saveAsJson = (data: any, fileName: string) => {
-  const blob = new Blob([JSON.stringify(data)], { type: '' });
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   saveAs(blob, fileName);
 };
 

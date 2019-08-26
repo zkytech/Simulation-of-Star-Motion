@@ -320,7 +320,6 @@ export default class Index extends React.Component<IProps, IState> {
     //@ts-ignore
 
     this.refs.container.appendChild(this.renderer.domElement);
-    // TODO:沙盒模式控制器应该修改为flyControls
     // 控制器，用于控制视角
     //@ts-ignore
     this.controls = new TrackballControls(camera, this.renderer.domElement);
