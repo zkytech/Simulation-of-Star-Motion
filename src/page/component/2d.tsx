@@ -836,6 +836,8 @@ export default class Index extends React.Component<IProps, IState> {
           }
           return true;
         });
+        // 删除预测线
+        this.predictStars = this.predictStars.filter(star1=>star1!==star.id)
         // 删除star
         return false;
       }

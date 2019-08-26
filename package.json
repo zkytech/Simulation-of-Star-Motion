@@ -2,7 +2,7 @@
   "name": "stars",
   "version": "0.1.0",
   "private": true,
-  "homepage": "/stars",
+  "homepage": "/stars/",
   "dependencies": {
     "@types/react-color": "^3.0.1",
     "@types/reactcss": "^1.2.3",

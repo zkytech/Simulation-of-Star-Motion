@@ -5,7 +5,7 @@ const {
 } = require('customize-cra');
 const setGlobalObject = value => config => {
   if (config.mode === "production") {
-    config.output.publicPath = '/stars'
+    config.output.publicPath = '/stars/'
   }
   console.log(config)
 
