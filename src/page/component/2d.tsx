@@ -103,6 +103,7 @@ export default class Index extends React.Component<IProps, IState> {
   hammer: HammerManager | null = null;
   paused = true; // 当前是否处于暂停状态
   sandboxToolMode: 'add' | 'delete' | 'edit' | null = null;
+  sandboxIdCounter = 100;
   /** 缩放长度 */
   zoomed = (value: number) => {
     return value * this.scale;
@@ -486,6 +487,7 @@ export default class Index extends React.Component<IProps, IState> {
     ) {
       // 进入沙盒模式
       this.stars = [];
+      this.resetView();
       this.refreshCanvas();
     }
     if (nextProps.sandboxData !== this.props.sandboxData) {
@@ -689,8 +691,9 @@ export default class Index extends React.Component<IProps, IState> {
     const star = Star2D.ofRandom({
       speedRange: [0, 0],
       sizeRange: [this.sandboxStarSize, this.sandboxStarSize],
-      id: `#${this.stars.length + 100}`
+      id: `#${this.sandboxIdCounter}`
     });
+    this.sandboxIdCounter += 1;
     star.position.x = x;
     star.position.y = y;
     star.draw(
@@ -920,14 +923,23 @@ export default class Index extends React.Component<IProps, IState> {
     this.predictTravel();
     this.refreshCanvas();
   };
-
+  /** 重置沙盒 */
   resetSandbox = () => {
     this.pause();
     this.stars = this.sandboxStars.map(star => star.clone());
     this.focousedStar = null;
+    this.resetView();
     this.setState({ focousOnLargest: false });
     this.forceUpdate();
     this.refreshCanvas();
+  };
+  /** 重置视野 */
+  resetView = () => {
+    this.scale = 1;
+    this.origin.canvas = { x: 0, y: 0 };
+    this.origin.screen = { x: 0, y: 0 };
+    this.focousedStar = null;
+    this.setState({ focousOnLargest: false });
   };
 
   hideStatus = true;
@@ -1158,14 +1170,14 @@ export default class Index extends React.Component<IProps, IState> {
                 <Icon
                   type="save"
                   className={style.sandbox_tools_icon}
-                  onClick={() => this.props.saveData(this.stars)}
+                  onClick={() => this.props.saveData(this.sandboxStars)}
                 />
               </Tooltip>
             ) : (
               <Icon
                 type="save"
                 className={style.sandbox_tools_icon}
-                onClick={() => this.props.saveData(this.stars)}
+                onClick={() => this.props.saveData(this.sandboxStars)}
               />
             )}
           </li>
@@ -1316,13 +1328,7 @@ export default class Index extends React.Component<IProps, IState> {
           {this.state.focousOnLargest ? '取消锁定' : '锁定最大星体'}
         </Button>
         <Button
-          onClick={() => {
-            this.scale = 1;
-            this.origin.canvas = { x: 0, y: 0 };
-            this.origin.screen = { x: 0, y: 0 };
-            this.focousedStar = null;
-            this.setState({ focousOnLargest: false });
-          }}
+          onClick={this.resetView}
           type={'ghost'}
           className={style.reset_button}
         >

@@ -66,6 +66,7 @@ const Index: FunctionComponent = () => {
               checked={mode === '3d'}
               onChange={checked => {
                 setMode(checked ? '3d' : '2d');
+                setSandboxMode(false);
                 if (checked) {
                   setStarNum(30);
                   setG(300);
