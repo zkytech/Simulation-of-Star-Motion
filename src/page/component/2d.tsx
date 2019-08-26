@@ -837,7 +837,9 @@ export default class Index extends React.Component<IProps, IState> {
           return true;
         });
         // 删除预测线
-        this.predictStars = this.predictStars.filter(star1=>star1!==star.id)
+        this.predictStars = this.predictStars.filter(
+          star1 => star1.id !== star.id
+        );
         // 删除star
         return false;
       }
@@ -919,14 +921,14 @@ export default class Index extends React.Component<IProps, IState> {
     this.refreshCanvas();
   };
 
-  resetSandbox = ()=>{
+  resetSandbox = () => {
     this.pause();
     this.stars = this.sandboxStars.map(star => star.clone());
-    this.focousedStar = null
-    this.setState({focousOnLargest:false})
+    this.focousedStar = null;
+    this.setState({ focousOnLargest: false });
     this.forceUpdate();
-    this.refreshCanvas()
-  }
+    this.refreshCanvas();
+  };
 
   hideStatus = true;
   largestStar: Star2D | null = null;
