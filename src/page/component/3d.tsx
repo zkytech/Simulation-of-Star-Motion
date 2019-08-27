@@ -363,11 +363,11 @@ export default class Index extends React.Component<IProps, IState> {
     //@ts-ignore
     this.controls.handleResize();
     this.renderGL();
+    this.forceUpdate();
   };
 
   componentDidMount() {
     if (this.props.canvasRef) this.props.canvasRef(this);
-    // 上面的初始化setState执行很慢所以后面的就加个延时
     this.start(true);
   }
 

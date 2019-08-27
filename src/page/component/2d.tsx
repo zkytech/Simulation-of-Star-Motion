@@ -500,6 +500,7 @@ export default class Index extends React.Component<IProps, IState> {
   componentWillUnmount() {
     // 退出时清除循环任务
     clearInterval(this.mainProcess);
+    window.removeEventListener('resize', this.update);
   }
   /**两指相互远离 */
   pinchoutHandler = (e: HammerInput) => {
@@ -576,17 +577,21 @@ export default class Index extends React.Component<IProps, IState> {
         this.ctx as CanvasRenderingContext2D,
         this.zoomFunctions
       );
-      drawArrow(
-        this.ctx as CanvasRenderingContext2D,
-        this.zoomedX(star.position.x),
-        this.zoomedY(star.position.y),
-        this.zoomedX(star.position.x + star.speed.x * 50),
-        this.zoomedY(star.position.y + star.speed.y * 50),
-        10,
-        10,
-        2,
-        star.color
-      );
+      if(this.props.sandboxMode){
+        // 沙盒模式下绘制方向箭头
+        drawArrow(
+          this.ctx as CanvasRenderingContext2D,
+          this.zoomedX(star.position.x),
+          this.zoomedY(star.position.y),
+          this.zoomedX(star.position.x + star.speed.x * 50),
+          this.zoomedY(star.position.y + star.speed.y * 50),
+          10,
+          10,
+          2,
+          star.color
+        );
+      }
+
     });
     // 绘制预测线
     this.predictStars.forEach(star => {
@@ -634,6 +639,11 @@ export default class Index extends React.Component<IProps, IState> {
     hammer.on('panstart', this.panstartHandler);
     hammer.on('panmove', this.panmoveHandler);
   };
+
+  update = () => {
+    this.forceUpdate();
+  };
+
   /** 组件加载完成后进行初始化动作 */
   componentDidMount() {
     if (this.props.canvasRef) {
@@ -642,7 +652,7 @@ export default class Index extends React.Component<IProps, IState> {
     const canvas = this.canvas as HTMLCanvasElement;
     const hammer = new Hammer(canvas);
     this.hammer = hammer;
-
+    window.addEventListener('resize', this.update);
     // 监听鼠标事件进行缩放、拖拽
     this.addControlEvents();
     this.ctx = canvas.getContext('2d');
@@ -1249,10 +1259,7 @@ export default class Index extends React.Component<IProps, IState> {
           </li>
         </ul>
         {/* 左侧信息列表   */}
-        <ul
-          className={style.info_panel}
-          // hidden={window.screen.width < 720 && this.hideStatus}
-        >
+        <ul className={style.info_panel}>
           {this.stars
             .sort((value1, value2) => value2.size - value1.size)
             .slice(

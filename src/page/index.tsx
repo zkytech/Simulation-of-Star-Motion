@@ -67,6 +67,7 @@ const Index: FunctionComponent = () => {
               onChange={checked => {
                 setMode(checked ? '3d' : '2d');
                 setSandboxMode(false);
+                setPaused(false);
                 if (checked) {
                   setStarNum(30);
                   setG(300);
@@ -278,8 +279,7 @@ const Index: FunctionComponent = () => {
   };
 
   return (
-    <div
-    >
+    <div>
       {mode === '2d' ? (
         <Canvas2D
           centerSize={centerSize}
