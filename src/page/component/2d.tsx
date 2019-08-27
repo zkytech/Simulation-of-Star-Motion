@@ -1309,16 +1309,12 @@ export default class Index extends React.Component<IProps, IState> {
               );
             })}
         </ul>
-        {this.state.editPanelVisible ? (
+        {this.state.editPanelVisible && isPC() ? (
           /** 编辑星体的面板（可拖拽） */
           <Rnd
             default={{
-              x: isPC()
-                ? this.zoomedX((this.state.editTarget as Star2D).position.x)
-                : 50,
-              y: isPC()
-                ? this.zoomedY((this.state.editTarget as Star2D).position.y)
-                : 80,
+              x: this.zoomedX((this.state.editTarget as Star2D).position.x),
+              y: this.zoomedY((this.state.editTarget as Star2D).position.y),
               width: 'auto',
               height: 'auto'
             }}
@@ -1344,6 +1340,32 @@ export default class Index extends React.Component<IProps, IState> {
               }}
             ></EditPanel>
           </Rnd>
+        ) : (
+          ''
+        )}
+        {this.state.editPanelVisible && !isPC() ? (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              backgroundColor: 'white',
+              zIndex: 10,
+              height: window.innerHeight + 'px',
+              width: window.innerWidth + 'px',
+              paddingTop: '2vh',
+              paddingLeft: '5vw'
+            }}
+          >
+            <EditPanel
+              star={this.state.editTarget as Star2D}
+              onSubmit={this.applyEditStar}
+              onClose={star => {
+                this.applyEditStar(star);
+                this.setState({ editPanelVisible: false });
+              }}
+            ></EditPanel>
+          </div>
         ) : (
           ''
         )}
