@@ -50,6 +50,8 @@ type IProps = {
   saveData: (stars: Star2D[]) => void;
   /** 加载数据 */
   loadData: (data: ExportData) => void;
+  /** 相对运动模式 */
+  relativeMode: boolean;
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -66,7 +68,8 @@ export default class Index extends React.Component<IProps, IState> {
     sandboxMode: false,
     sandboxData: [],
     step: 1,
-    disableCenter: false
+    disableCenter: false,
+    relativeMode: false
   };
   readonly state: IState = {
     selectedKey: -1,
@@ -214,13 +217,13 @@ export default class Index extends React.Component<IProps, IState> {
     }
   };
   /** 锁定窗口位置 */
-  focusOn = (target?: Vector2) => {
+  focousOn = (target?: Vector2) => {
     if (!target) {
       // @ts-ignore
       target = this.focousedStar.position;
     }
-    this.origin.canvas.x = target.x;
-    this.origin.canvas.y = target.y;
+    this.origin.canvas.x = this.props.relativeMode ? 0 : target.x;
+    this.origin.canvas.y = this.props.relativeMode ? 0 : target.y;
     this.origin.screen.x = window.innerWidth / 2;
     this.origin.screen.y = window.innerHeight / 2;
   };
@@ -328,12 +331,8 @@ export default class Index extends React.Component<IProps, IState> {
       // 清空画布
       this.clearCanvas();
 
-      if (this.focousedStar || this.state.focousOnLargest) {
-        if (!this.focousedStar) {
-          this.focusOn((this.largestStar as Star2D).position);
-        } else {
-          this.focusOn(this.focousedStar.position);
-        }
+      if (this.focousedStar) {
+        this.focousOn(this.focousedStar.position);
       }
       // 计算引力
       this.calcForce();
@@ -345,7 +344,8 @@ export default class Index extends React.Component<IProps, IState> {
           this.props.showID,
           this.props.travelLength,
           this.ctx as CanvasRenderingContext2D,
-          this.zoomFunctions
+          this.zoomFunctions,
+          this.props.relativeMode ? this.focousedStar : null
         );
         // 如果是中心恒星，不移动
         if (star.id === '#0') return;
@@ -429,11 +429,27 @@ export default class Index extends React.Component<IProps, IState> {
               star1.speed = speed;
               changeList[star1.id] = star1;
             }
+            if (this.focousedStar && this.focousedStar.id === star2.id) {
+              this.focousedStar = null;
+              if (this.props.relativeMode) {
+                // 避免在坐标系转换时出现视角瞬移
+                this.origin.canvas.x = star2.position.x;
+                this.origin.canvas.y = star2.position.y;
+              }
+            }
           } else {
+            // star1被吞噬
             deleteIndex.push(index1);
             if (this.props.mergeMode) star2.setSize = totalSize;
             star2.speed = speed;
             changeList[star2.id] = star2;
+            if (this.focousedStar && this.focousedStar.id === star1.id) {
+              this.focousedStar = null;
+              if (this.props.relativeMode) {
+                this.origin.canvas.x = star1.position.x;
+                this.origin.canvas.y = star1.position.y;
+              }
+            }
           }
         } else {
           // 计算引力，这里的g只是一个相对量，用于控制引力大小
@@ -565,7 +581,8 @@ export default class Index extends React.Component<IProps, IState> {
         this.props.showID,
         this.props.travelLength,
         this.ctx as CanvasRenderingContext2D,
-        this.zoomFunctions
+        this.zoomFunctions,
+        this.props.relativeMode ? this.focousedStar : null
       );
     }
 
@@ -575,9 +592,10 @@ export default class Index extends React.Component<IProps, IState> {
         this.props.showID,
         this.props.travelLength,
         this.ctx as CanvasRenderingContext2D,
-        this.zoomFunctions
+        this.zoomFunctions,
+        this.props.relativeMode ? this.focousedStar : null
       );
-      if(this.props.sandboxMode){
+      if (this.props.sandboxMode) {
         // 沙盒模式下绘制方向箭头
         drawArrow(
           this.ctx as CanvasRenderingContext2D,
@@ -591,7 +609,6 @@ export default class Index extends React.Component<IProps, IState> {
           star.color
         );
       }
-
     });
     // 绘制预测线
     this.predictStars.forEach(star => {
@@ -604,7 +621,7 @@ export default class Index extends React.Component<IProps, IState> {
     });
     // 移动视角到focousedStar
     if (this.focousedStar) {
-      this.focusOn(this.focousedStar.position);
+      this.focousOn(this.focousedStar.position);
     }
   };
   /** 移除拖动&缩放控制事件 */
@@ -719,7 +736,8 @@ export default class Index extends React.Component<IProps, IState> {
       this.props.showID,
       0,
       this.ctx as CanvasRenderingContext2D,
-      this.zoomFunctions
+      this.zoomFunctions,
+      this.focousedStar
     );
     this.tempStar = star;
     const canvas = this.canvas as HTMLCanvasElement;
@@ -982,7 +1000,6 @@ export default class Index extends React.Component<IProps, IState> {
     }
   };
   hideStatus = true;
-  largestStar: Star2D | null = null;
   public render() {
     return (
       <div>
@@ -1269,8 +1286,8 @@ export default class Index extends React.Component<IProps, IState> {
                 : Math.floor((window.innerHeight - 100) / 70)
             )
             .map((value, index) => {
-              if (index === 0) {
-                this.largestStar = value;
+              if (index === 0 && this.state.focousOnLargest) {
+                this.focousedStar = value;
               }
               const focoused =
                 this.focousedStar && this.focousedStar.id === value.id;
@@ -1376,9 +1393,13 @@ export default class Index extends React.Component<IProps, IState> {
         <Button
           onClick={() => {
             if (this.state.focousOnLargest) {
+              if (this.props.relativeMode) {
+                this.origin.canvas.x = (this.focousedStar as Star2D).position.x;
+                this.origin.canvas.y = (this.focousedStar as Star2D).position.y;
+              }
+              this.focousedStar = null;
               this.setState({ focousOnLargest: false });
             } else {
-              this.focousedStar = null;
               this.setState({ focousOnLargest: true });
             }
           }}

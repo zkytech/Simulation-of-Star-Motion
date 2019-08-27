@@ -36,6 +36,7 @@ const Index: FunctionComponent = () => {
   const [step, setStep] = useState(1); // 步长，步长越小，计算精度越高
   const [phonePanelVisible, setPhonePanelVisible] = useState(false); // 手机版的控制面板是否可见
   const [disableCenter, setDisableCenter] = useState(true); // 是否禁用中心天体
+  const [relativeMode, setRelativeMode] = useState(false); // 相对运动视角
   useEffect(() => {
     console.log('mode change', mode);
   }, [mode]);
@@ -193,6 +194,17 @@ const Index: FunctionComponent = () => {
                   marks={{ 0.1: '0.1', 1: '1', 2: '2', 5: '5' }}
                 />
               </li>
+              {mode === '2d' ? (
+                <li>
+                  <span>相对运动视角</span>
+                  <Switch
+                    checked={relativeMode}
+                    onChange={checked => setRelativeMode(checked)}
+                  />
+                </li>
+              ) : (
+                ''
+              )}
               <li>
                 <span>显示ID</span>
                 <Switch
@@ -306,6 +318,7 @@ const Index: FunctionComponent = () => {
           onPause={() => setPaused(true)}
           saveData={saveData}
           loadData={loadData}
+          relativeMode={relativeMode}
         />
       ) : (
         <Canvas3D

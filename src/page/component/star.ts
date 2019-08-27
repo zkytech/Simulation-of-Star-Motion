@@ -172,12 +172,13 @@ class Star2D extends Star {
     showID: boolean,
     tarvelLength: number,
     ctx: CanvasRenderingContext2D,
-    zoom: ZoomFunctions
+    zoom: ZoomFunctions,
+    focousOn: Star2D | null
   ) => {
     // 绘制圆形&标签
-    this.drawArc(showID, ctx, zoom);
+    this.drawArc(showID, ctx, zoom, focousOn);
     // 绘制轨迹
-    this.drawTravel(tarvelLength, ctx, zoom);
+    this.drawTravel(tarvelLength, ctx, zoom, false, focousOn);
   };
 
   /** 绘制圆形
@@ -187,12 +188,15 @@ class Star2D extends Star {
   drawArc = (
     showID: boolean,
     ctx: CanvasRenderingContext2D,
-    zoom: ZoomFunctions
+    zoom: ZoomFunctions,
+    focousOn: Star2D | null
   ) => {
+    const focousOnX = focousOn ? (focousOn as Star2D).position.x : 0;
+    const focousOnY = focousOn ? (focousOn as Star2D).position.y : 0;
     ctx.beginPath();
     ctx.arc(
-      zoom.zoomedX(this.position.x),
-      zoom.zoomedY(this.position.y),
+      zoom.zoomedX(this.position.x - focousOnX),
+      zoom.zoomedY(this.position.y - focousOnY),
       zoom.zoomed(this.size),
       0,
       this.angle
@@ -205,8 +209,8 @@ class Star2D extends Star {
       ctx.fillStyle = 'white';
       ctx.fillText(
         this.id,
-        zoom.zoomedX(this.position.x + 10),
-        zoom.zoomedY(this.position.y)
+        zoom.zoomedX(this.position.x + 10 - focousOnX),
+        zoom.zoomedY(this.position.y - focousOnY)
       );
     }
   };
@@ -219,7 +223,8 @@ class Star2D extends Star {
     travelLength: number,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions,
-    predict: boolean = false
+    predict: boolean = false,
+    focousOn: Star2D | null = null
   ) => {
     if (travelLength === 0) {
       this.travel = [];
@@ -229,9 +234,18 @@ class Star2D extends Star {
     // 开始绘制
     ctx.beginPath();
     this.travel.forEach((value, index) => {
-      if (index === 0) ctx.moveTo(zoom.zoomedX(value.x), zoom.zoomedY(value.y));
+      const focousOnX = focousOn ? (focousOn as Star2D).travel[index].x : 0;
+      const focousOnY = focousOn ? (focousOn as Star2D).travel[index].y : 0;
+      if (index === 0)
+        ctx.moveTo(
+          zoom.zoomedX(value.x - focousOnX),
+          zoom.zoomedY(value.y - focousOnY)
+        );
       else {
-        ctx.lineTo(zoom.zoomedX(value.x), zoom.zoomedY(value.y));
+        ctx.lineTo(
+          zoom.zoomedX(value.x - focousOnX),
+          zoom.zoomedY(value.y - focousOnY)
+        );
       }
     });
     if (predict) {
