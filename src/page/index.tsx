@@ -199,7 +199,11 @@ const Index: FunctionComponent = () => {
           </Panel>
         </Collapse>
         <ul className={style.option_list}>
-          <li>
+          <li
+            style={{
+              display: sandboxMode && mode === '2d' ? 'none' : undefined
+            }}
+          >
             <Button
               onClick={() => {
                 if (!paused) {
@@ -260,6 +264,7 @@ const Index: FunctionComponent = () => {
                     ref.start();
                   }, 100);
                 }}
+                type={'primary'}
               >
                 退出沙盒
               </Button>

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { TrackballControls } from './controls/TrackballControls';
 import style from '../style.module.less';
 import { Star3D } from './star';
+import { Button } from 'antd';
 
 type IState = {};
 type IProps = {
@@ -232,7 +233,10 @@ export default class Index extends React.Component<IProps, IState> {
    * @param init 是否需要重新初始化所有参数
    */
   start = (init: boolean = true) => {
-    if (init) this.initStars(this.props.initialNum);
+    if (init) {
+      this.initStars(this.props.initialNum);
+      this.resetView();
+    }
     if (this.mainProcess) clearInterval(this.mainProcess);
     setTimeout(() => {
       if (init) {
@@ -332,9 +336,10 @@ export default class Index extends React.Component<IProps, IState> {
     controls.staticMoving = true;
     controls.dynamicDampingFactor = 0.3;
     controls.target.set(0, 0, 0);
+    controls.object.position.set(0, 0, 500);
     //@ts-ignore
     controls.addEventListener('change', this.renderGL);
-    controls.object.position.set(0, 0, 500);
+
     window.addEventListener('resize', this.onWindowResize, false);
     this.renderGL();
   };
@@ -447,7 +452,14 @@ export default class Index extends React.Component<IProps, IState> {
       }
     }
   }
-
+  /** 重置视野 */
+  resetView = () => {
+    if (this.controls) {
+      this.controls.target.set(0, 0, 0);
+      this.controls.object.position.set(0, 0, 500);
+    }
+    this.focousedStar = null;
+  };
   public render() {
     return (
       <div>
@@ -496,6 +508,13 @@ export default class Index extends React.Component<IProps, IState> {
               );
             })}
         </ul>
+        <Button
+          onClick={this.resetView}
+          type={'ghost'}
+          className={style.reset_button}
+        >
+          重置视野
+        </Button>
       </div>
     );
   }

@@ -291,8 +291,8 @@ export default class Index extends React.Component<IProps, IState> {
     if (this.mainProcess) {
       clearInterval(this.mainProcess);
     }
-    this.paused = true;
     this.props.onPause();
+    this.paused = true;
     this.exitSandboxtool();
   };
 
@@ -312,6 +312,7 @@ export default class Index extends React.Component<IProps, IState> {
     this.paused = false;
     this.addStarArrows = [];
     this.exitSandboxtool();
+    this.setState({ editPanelVisible: false });
     // 如果已经有interval先清除
     if (this.mainProcess) {
       clearInterval(this.mainProcess);
@@ -322,6 +323,7 @@ export default class Index extends React.Component<IProps, IState> {
       this.initStars();
       this.focousedStar = null;
     }
+    this.forceUpdate();
     this.mainProcess = setInterval(() => {
       // 清空画布
       this.clearCanvas();
@@ -647,13 +649,20 @@ export default class Index extends React.Component<IProps, IState> {
     // 开始绘制
     this.start();
   }
-
-  /** 沙盒添加星体状态 */
-  sandboxtoolAddMode = (size: number) => {
+  /** 点击编辑/删除/创建行星，进行暂停并重置星体状态 */
+  onClickSandboxtools = () => {
+    console.log(this.paused);
     if (!this.paused) {
       // 暂停画面
       this.pause();
+      // 重置状态
+      this.stars = this.sandboxStars.map(star => star.clone());
+      this.refreshCanvas();
     }
+  };
+  /** 沙盒添加星体状态 */
+  sandboxtoolAddMode = (size: number) => {
+    this.onClickSandboxtools();
     this.exitSandboxtool();
     // 首先取消对拖动相关事件的监听
     // 注意这里做的所有操作全部要在start()函数中做反向操作
@@ -803,9 +812,7 @@ export default class Index extends React.Component<IProps, IState> {
   sandboxStarSize = 10;
   /** 删除星体 */
   sandboxtoolDeleteStarMode = () => {
-    if (!this.paused) {
-      this.pause();
-    }
+    this.onClickSandboxtools();
     this.exitSandboxtool();
     this.removeControlEvents();
     const canvas = this.canvas as HTMLCanvasElement;
@@ -853,15 +860,10 @@ export default class Index extends React.Component<IProps, IState> {
     // 刷新画布
     this.refreshCanvas();
   };
+
   /** 编辑星体模式 */
   sandboxtoolEditMode = () => {
-    if (!this.paused) {
-      // 暂停画面
-      this.pause();
-      // 重置状态
-      this.stars = this.sandboxStars.map(star => star.clone());
-      this.refreshCanvas();
-    }
+    this.onClickSandboxtools();
     this.exitSandboxtool();
     this.removeControlEvents();
     const canvas = this.canvas as HTMLCanvasElement;
@@ -1145,6 +1147,7 @@ export default class Index extends React.Component<IProps, IState> {
                   onClick={() => {
                     this.setState({ selectedKey: -1 });
                     if (this.paused) {
+                      this.paused = false;
                       this.start(false);
                     } else {
                       this.pause();

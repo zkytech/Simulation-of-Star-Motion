@@ -27,14 +27,20 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit, params }) => {
   const [importParam, setImportParam] = useState<ExportParams>();
   const [rowData, setRowData] = useState<SandboxData[]>([
     {
-      position: { x: 900, y: 300, z: 0 },
-      speed: { x: 1.5, y: 1.5, z: 0 },
+      position: { x: 0, y: 0, z: 0 },
+      speed: { x: 1.5, y: 5, z: -2 },
       color: 'blue',
       size: 10
     },
     {
-      position: { x: 900, y: 250, z: 0 },
-      speed: { x: -1.5, y: -1.5, z: 0 },
+      position: { x: 20, y: 20, z: 50 },
+      speed: { x: -5, y: -5, z: 1 },
+      color: 'green',
+      size: 10
+    },
+    {
+      position: { x: 150, y: 70, z: 50 },
+      speed: { x: 3, y: 3, z: 3 },
       color: 'red',
       size: 10
     }
