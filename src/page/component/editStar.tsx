@@ -132,12 +132,12 @@ const Index: FunctionComponent<IProps> = ({ star, onSubmit, onClose }) => {
         </Row>
       </li>
       <li className={style.edit_star_panel_vect}>
-        <span>速度</span>
+        <span>半径</span>
         <br />
         <Row style={{ width: '350px' }}>
           <Col span={18}>
             <Slider
-              min={0}
+              min={0.00001}
               max={100}
               marks={{ 0: 0, 5: 5, 10: 10, 50: 50, 100: 100 }}
               step={0.1}
@@ -151,7 +151,7 @@ const Index: FunctionComponent<IProps> = ({ star, onSubmit, onClose }) => {
           </Col>
           <Col span={6}>
             <InputNumber
-              min={0}
+              min={0.00001}
               step={0.1}
               value={target.size}
               onChange={value => {

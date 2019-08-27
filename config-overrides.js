@@ -31,7 +31,7 @@ module.exports = {
       'hammerjs': 'Hammer',
       'moment': 'moment',
       'antd': 'antd',
-      'three': 'THREE'
+      // 'three': 'THREE' // 这东西一加入externals就会导致3d模型的卸载出现问题，从而导致高cpu占用
     }),
 
     // antd模块化加载

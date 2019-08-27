@@ -374,29 +374,16 @@ export default class Index extends React.Component<IProps, IState> {
   }
 
   componentWillUnmount() {
-    if (this.stars[0].sphere.material) {
-      this.stars.forEach(star => {
-        star.sphere.geometry.dispose();
-        //@ts-ignore
-        star.sphere.material.dispose();
-        star.lines.forEach(line => {
-          line.geometry.dispose();
-          //@ts-ignore
-          line.material.dispose();
-        });
-      });
-    }
-    this.renderer.forceContextLoss();
     cancelAnimationFrame(this.animateFrame);
     clearInterval(this.mainProcess);
     window.removeEventListener('resize', this.onWindowResize);
-
     if (this.controls !== null) {
       //@ts-ignore
       this.refs.container.removeChild(this.renderer.domElement);
       //@ts-ignore
       this.controls.removeEventListener('change', this.renderGL);
     }
+    this.renderer.forceContextLoss();
   }
   componentWillReceiveProps(nextProps: IProps) {
     if (nextProps.travelLength !== this.props.travelLength) {
