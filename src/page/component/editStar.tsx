@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useState, useEffect } from 'react';
 import { Star2D } from './star';
-import { InputNumber, Button } from 'antd';
+import { InputNumber, Button, Row, Col, Slider } from 'antd';
 import style from '../style.module.less';
 import ColorPicker from './colorPicker';
 type IProps = {
@@ -57,53 +57,129 @@ const Index: FunctionComponent<IProps> = ({ star, onSubmit, onClose }) => {
         />
       </li>
       <li className={style.edit_star_panel_vect}>
+        <span>方向</span>
+        <br />
+        <Row style={{ width: '350px' }}>
+          <Col span={18}>
+            <Slider
+              min={-180}
+              max={180}
+              step={0.1}
+              marks={{
+                0: '0°',
+                180: '180°',
+                '-180': '-180°',
+                90: '90°',
+                '-90': '-90°'
+              }}
+              onChange={value => {
+                // @ts-ignore
+                target.direction = value;
+                setTarget(target);
+                setUpdate(!update);
+              }}
+              value={target.direction}
+            />
+          </Col>
+          <Col span={6}>
+            <InputNumber
+              min={-180}
+              max={180}
+              step={0.1}
+              value={target.direction}
+              onChange={value => {
+                // @ts-ignore
+                target.direction = value;
+                setTarget(target);
+                setUpdate(!update);
+              }}
+            />
+          </Col>
+        </Row>
+      </li>
+      <li className={style.edit_star_panel_vect}>
         <span>速度</span>
         <br />
-        X:
-        <InputNumber
-          value={target.speed.x}
-          onChange={value => {
-            target.speed.x = value as number;
-            setTarget(target);
-            setUpdate(!update);
-          }}
-        />
-        &emsp; Y:
-        <InputNumber
-          value={target.speed.y}
-          onChange={value => {
-            target.speed.y = value as number;
-            setTarget(target);
-            setUpdate(!update);
-          }}
-        />
+        <Row style={{ width: '350px' }}>
+          <Col span={18}>
+            <Slider
+              min={0}
+              max={50}
+              marks={{ 0: 0, 5: 5, 10: 10, 50: 50 }}
+              step={0.1}
+              onChange={value => {
+                // @ts-ignore
+                target.speedSize = value;
+                setTarget(target);
+                setUpdate(!update);
+              }}
+              value={target.speedSize}
+            />
+          </Col>
+          <Col span={6}>
+            <InputNumber
+              min={0}
+              step={0.1}
+              onChange={value => {
+                // @ts-ignore
+                target.speedSize = value;
+                setTarget(target);
+                setUpdate(!update);
+              }}
+              value={target.speedSize}
+            />
+          </Col>
+        </Row>
       </li>
-      <li>
-        大小:
-        <InputNumber
-          value={target.size}
-          onChange={value => {
-            target.setSize = value as number;
-            setTarget(target);
-            setUpdate(!update);
-          }}
-        />
+      <li className={style.edit_star_panel_vect}>
+        <span>速度</span>
+        <br />
+        <Row style={{ width: '350px' }}>
+          <Col span={18}>
+            <Slider
+              min={0}
+              max={100}
+              marks={{ 0: 0, 5: 5, 10: 10, 50: 50, 100: 100 }}
+              step={0.1}
+              value={target.size}
+              onChange={value => {
+                target.setSize = value as number;
+                setTarget(target);
+                setUpdate(!update);
+              }}
+            />
+          </Col>
+          <Col span={6}>
+            <InputNumber
+              min={0}
+              step={0.1}
+              value={target.size}
+              onChange={value => {
+                target.setSize = value as number;
+                setTarget(target);
+                setUpdate(!update);
+              }}
+            />
+          </Col>
+        </Row>
       </li>
 
       <li>
-        <Button
-          style={{ marginLeft: '20px' }}
-          type="primary"
-          onClick={() => onClose(target)}
-        >
-          确定
-        </Button>{' '}
-        <Button
-          style={{ marginLeft: '20px' }}
-          onClick={() => onClose(originStar)}
-        >
-          取消
-        </Button>
+        <div style={{ width: '300px' }}>
+          <Button
+            type="primary"
+            onClick={() => onClose(target)}
+            style={{ display: 'inline-block' }}
+          >
+            确定
+          </Button>{' '}
+          <Button
+            onClick={() => onClose(originStar)}
+            style={{ display: 'inline-block' }}
+          >
+            取消
+          </Button>
+        </div>
       </li>
     </ul>
   );

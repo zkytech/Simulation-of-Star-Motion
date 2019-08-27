@@ -742,14 +742,14 @@ export default class Index extends React.Component<IProps, IState> {
     // 获取画布坐标
     const x = this.zoomedX_INV(
       // @ts-ignore
-      e.clientX
+      typeof e.clientX === 'number' // 可能为0 所以必须用typeof来判断
         ? (e as MouseEvent).clientX
         : (e as TouchEvent).touches[0].clientX
     );
 
     const y = this.zoomedY_INV(
       // @ts-ignore
-      e.clientY
+      typeof e.clientY === 'number' // 可能为0 所以必须用typeof来判断
         ? (e as MouseEvent).clientY
         : (e as TouchEvent).touches[0].clientY
     );
@@ -848,6 +848,8 @@ export default class Index extends React.Component<IProps, IState> {
       }
       return true;
     });
+    // 更新预测线
+    this.predictTravel();
     // 刷新画布
     this.refreshCanvas();
   };
@@ -856,6 +858,9 @@ export default class Index extends React.Component<IProps, IState> {
     if (!this.paused) {
       // 暂停画面
       this.pause();
+      // 重置状态
+      this.stars = this.sandboxStars.map(star => star.clone());
+      this.refreshCanvas();
     }
     this.exitSandboxtool();
     this.removeControlEvents();
@@ -919,6 +924,15 @@ export default class Index extends React.Component<IProps, IState> {
       }
       return value;
     });
+    this.sandboxStars = this.sandboxStars.map(value => {
+      const target = this.state.editTarget as Star2D;
+      if (value.id === target.id) {
+        // 将改变应用到stars列表中
+        value = star.clone();
+        // 刷新画布
+      }
+      return value;
+    });
     // 绘制预测线
     this.predictTravel();
     this.refreshCanvas();
@@ -942,6 +956,19 @@ export default class Index extends React.Component<IProps, IState> {
     this.setState({ focousOnLargest: false });
   };
 
+  /** 获取图标样式 */
+  getCursor = () => {
+    switch (this.sandboxToolMode) {
+      case 'add':
+        return 'crosshair';
+      case 'edit':
+        return 'pointer';
+      case 'delete':
+        return 'crosshair';
+      default:
+        return 'default';
+    }
+  };
   hideStatus = true;
   largestStar: Star2D | null = null;
   public render() {
@@ -958,11 +985,8 @@ export default class Index extends React.Component<IProps, IState> {
           style={{
             backgroundColor: 'black',
             display: 'block',
-            cursor:
-              this.sandboxToolMode === 'add' ||
-              this.sandboxToolMode === 'delete'
-                ? 'crosshair'
-                : 'move',
+            overflow: 'hidden',
+            cursor: this.getCursor(),
             transform: `scale(${1 / this.pixelRatio})`,
             transformOrigin: '0 0'
           }}
@@ -1150,14 +1174,14 @@ export default class Index extends React.Component<IProps, IState> {
             {isPC() ? (
               <Tooltip title={'重置沙盒状态'}>
                 <Icon
-                  type="undo"
+                  type="reload"
                   className={style.sandbox_tools_icon}
                   onClick={this.resetSandbox}
                 />
               </Tooltip>
             ) : (
               <Icon
-                type="undo"
+                type="reload"
                 className={style.sandbox_tools_icon}
                 onClick={this.resetSandbox}
               />
@@ -1299,7 +1323,17 @@ export default class Index extends React.Component<IProps, IState> {
               height: 'auto'
             }}
             className={style.rnd_panel}
-            cancel="input,.flex-box-fix"
+            cancel="input,.ant-slider-handle"
+            enableResizing={{
+              top: false,
+              right: true,
+              bottom: false,
+              left: false,
+              topRight: false,
+              bottomRight: false,
+              bottomLeft: false,
+              topLeft: false
+            }}
           >
             <EditPanel
               star={this.state.editTarget as Star2D}

@@ -273,7 +273,13 @@ const Index: FunctionComponent = () => {
   };
 
   return (
-    <div>
+    <div
+      style={{
+        height: window.innerHeight,
+        width: window.innerWidth,
+        overflow: 'hidden'
+      }}
+    >
       {mode === '2d' ? (
         <Canvas2D
           centerSize={centerSize}

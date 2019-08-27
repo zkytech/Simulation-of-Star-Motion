@@ -1,4 +1,9 @@
-import { randomColor, deepCopy, makeTextSprite } from './utils';
+import {
+  randomColor,
+  deepCopy,
+  makeTextSprite,
+  calcDistanceOnVec2
+} from './utils';
 import * as THREE from 'three';
 class Star {
   constructor(params: {
@@ -90,6 +95,49 @@ class Star2D extends Star {
       color: this.color,
       size: this.size
     };
+  }
+  private lastDirection = 0;
+
+  /** 获取速度的角度 */
+  get direction() {
+    const direction = (Math.atan2(this.speed.y, this.speed.x) * 180) / Math.PI;
+    if (!(this.speed.x === 0 && this.speed.y === 0)) {
+      this.lastDirection = direction;
+    }
+    if (this.speed.x === 0 && this.speed.y === 0) {
+      // 如果向量为0，就返回最后一个非0速度向量的direction
+      return this.lastDirection;
+    }
+    return direction;
+  }
+  /** 设置速度的角度 */
+  set direction(direction: number) {
+    const speed = calcDistanceOnVec2(this.speed, { x: 0, y: 0 });
+    this.lastDirection = direction;
+
+    direction = (direction / 180) * Math.PI;
+
+    this.speed.x = speed * Math.cos(direction);
+    this.speed.y = speed * Math.sin(direction);
+  }
+
+  get speedSize() {
+    return calcDistanceOnVec2(this.speed, { x: 0, y: 0 });
+  }
+
+  set speedSize(speed: number) {
+    const currentSpeed = calcDistanceOnVec2(this.speed, { x: 0, y: 0 });
+
+    if (currentSpeed === 0) {
+      // 当向量为0时，没有方向，这里使用this.lastDirection作为方向
+      const direction = (this.lastDirection / 180) * Math.PI;
+      this.speed.x = speed * Math.cos(direction);
+      this.speed.y = speed * Math.sin(direction);
+    } else {
+      const times = speed / currentSpeed;
+      this.speed.x *= times;
+      this.speed.y *= times;
+    }
   }
 
   travel = [] as Vector2[];
@@ -186,8 +234,8 @@ class Star2D extends Star {
         ctx.lineTo(zoom.zoomedX(value.x), zoom.zoomedY(value.y));
       }
     });
-    if(predict){
-      ctx.setLineDash([10])
+    if (predict) {
+      ctx.setLineDash([10]);
     }
     ctx.lineWidth = zoom.zoomed(1);
     ctx.strokeStyle = this.color;

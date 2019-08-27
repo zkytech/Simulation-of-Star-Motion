@@ -3,7 +3,14 @@ import Index from './page/index';
 
 const App: React.FC = () => {
   return (
-    <div className="App">
+    <div
+      className="App"
+      style={{
+        height: window.innerHeight,
+        width: window.innerWidth,
+        overflow: 'hidden'
+      }}
+    >
       <Index></Index>
     </div>
   );
