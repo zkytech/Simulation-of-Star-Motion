@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState } from 'react';
+import React, { FunctionComponent, useState, useEffect } from 'react';
 import {
   InputNumber,
   Button,
@@ -36,6 +36,10 @@ const Index: FunctionComponent = () => {
   const [step, setStep] = useState(1); // 步长，步长越小，计算精度越高
   const [phonePanelVisible, setPhonePanelVisible] = useState(false); // 手机版的控制面板是否可见
   const [disableCenter, setDisableCenter] = useState(true); // 是否禁用中心天体
+  useEffect(() => {
+    console.log('mode change', mode);
+  }, [mode]);
+
   const saveData = (stars: Star2D[]) => {
     saveAsJson(
       {

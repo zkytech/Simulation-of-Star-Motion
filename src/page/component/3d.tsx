@@ -240,7 +240,6 @@ export default class Index extends React.Component<IProps, IState> {
     if (this.mainProcess) clearInterval(this.mainProcess);
     setTimeout(() => {
       if (init) {
-        this.componentWillUnmount();
         this.camera = new THREE.PerspectiveCamera(
           60,
           window.innerWidth / window.innerHeight,
@@ -345,7 +344,10 @@ export default class Index extends React.Component<IProps, IState> {
   };
 
   renderGL = () => {
-    this.renderer.render(this.scene, this.camera);
+    try {
+      // unmount执行过程太慢，会导致这里报错
+      this.renderer.render(this.scene, this.camera);
+    } catch {}
   };
 
   animate = () => {
@@ -372,11 +374,23 @@ export default class Index extends React.Component<IProps, IState> {
   }
 
   componentWillUnmount() {
-    // forceContextLoss 非常重要，否则即使组件卸载 依旧会占用大量计算资源，除非页面刷新
+    if (this.stars[0].sphere.material) {
+      this.stars.forEach(star => {
+        star.sphere.geometry.dispose();
+        //@ts-ignore
+        star.sphere.material.dispose();
+        star.lines.forEach(line => {
+          line.geometry.dispose();
+          //@ts-ignore
+          line.material.dispose();
+        });
+      });
+    }
     this.renderer.forceContextLoss();
     cancelAnimationFrame(this.animateFrame);
     clearInterval(this.mainProcess);
-    window.removeEventListener('resize', this.onWindowResize, false);
+    window.removeEventListener('resize', this.onWindowResize);
+
     if (this.controls !== null) {
       //@ts-ignore
       this.refs.container.removeChild(this.renderer.domElement);
