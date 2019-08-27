@@ -137,10 +137,10 @@ const Index: FunctionComponent<IProps> = ({ star, onSubmit, onClose }) => {
         <Row style={{ width: '350px' }}>
           <Col span={18}>
             <Slider
-              min={0.00001}
+              min={0.01}
               max={100}
-              marks={{ 0: 0, 5: 5, 10: 10, 50: 50, 100: 100 }}
-              step={0.1}
+              marks={{ 5: 5, 10: 10, 50: 50, 100: 100 }}
+              step={0.01}
               value={target.size}
               onChange={value => {
                 target.setSize = value as number;
