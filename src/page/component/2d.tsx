@@ -975,13 +975,7 @@ export default class Index extends React.Component<IProps, IState> {
   largestStar: Star2D | null = null;
   public render() {
     return (
-      <div
-        style={{
-          height: window.innerHeight,
-          width: window.innerWidth,
-          overflow: 'hidden'
-        }}
-      >
+      <div>
         <canvas
           ref={ref => (this.canvas = ref)}
           style={{

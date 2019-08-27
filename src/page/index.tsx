@@ -279,11 +279,6 @@ const Index: FunctionComponent = () => {
 
   return (
     <div
-      style={{
-        height: window.innerHeight,
-        width: window.innerWidth,
-        overflow: 'hidden'
-      }}
     >
       {mode === '2d' ? (
         <Canvas2D
