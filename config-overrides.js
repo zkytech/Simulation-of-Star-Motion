@@ -3,11 +3,17 @@ const {
   fixBabelImports,
   addLessLoader
 } = require('customize-cra');
+const {
+  GenerateSW
+} = require('workbox-webpack-plugin');
 const setGlobalObject = value => config => {
   if (config.mode === "production") {
     config.output.publicPath = '/stars/'
+    // 禁止service-worker缓存index.html
+    config.plugins.push(new GenerateSW({
+      exclude: [/\.html$/]
+    }))
   }
-  console.log(config)
 
   return config
 }
