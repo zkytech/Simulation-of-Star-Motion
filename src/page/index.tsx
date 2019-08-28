@@ -18,16 +18,16 @@ import { saveAsJson } from './component/utils';
 const { Panel } = Collapse;
 
 const Index: FunctionComponent = () => {
-  const [starNum, setStarNum] = useState(500); // 初始星体数
+  const [starNum, setStarNum] = useState(500); // 初始天体数
   const [tarvelLength, setTravelLength] = useState(300); // 尾迹长度（支持实时调整）
-  const [centerSize, setCenterSize] = useState(15); // 中心星体大小
+  const [centerSize, setCenterSize] = useState(15); // 中心天体大小
   const [ref, setRef] = useState<Canvas3D | Canvas2D>(); // ref
   const [g, setG] = useState(30); // 引力常量
   const [showId, setShowId] = useState(true); // 是否显示id
-  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 5]); // 星体大小范围
+  const [sizeRange, setSizeRange] = useState<[number, number]>([1, 5]); // 天体大小范围
   const [mergeMode, setMergeMode] = useState(true); // 吞噬模式
   const [playSpeed, setPlaySpeed] = useState(1); // 播放速度（支持程度与客户端电脑算力相关）
-  const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]); // 星体初始速度范围
+  const [speedRange, setSpeedRange] = useState<[number, number]>([0, 5]); // 天体初始速度范围
   const [paused, setPaused] = useState(false); // 暂停状态
   const [mode, setMode] = useState<'2d' | '3d'>('2d'); // 模式 '2d'|'3d'
   const [modalVisble, setModalVisble] = useState(false); // 模态框可视状态
@@ -47,7 +47,7 @@ const Index: FunctionComponent = () => {
         stars: stars.map(star => star.sandboxData),
         params: { g, disableCenter, centerSize, step, mergeMode }
       },
-      `${new Date().toDateString()}星体数据.json`
+      `${new Date().toDateString()}天体数据.json`
     );
   };
   const loadData = (data: ExportData) => {
@@ -101,7 +101,7 @@ const Index: FunctionComponent = () => {
           </li>
 
           <li>
-            <span className={style.input_prefix}>初始星体数量</span>
+            <span className={style.input_prefix}>初始天体数量</span>
             <InputNumber
               value={starNum}
               onChange={value => setStarNum(value as number)}
@@ -120,7 +120,7 @@ const Index: FunctionComponent = () => {
           <Panel header={'高级选项'} key={0}>
             <ul className={style.option_list}>
               <li>
-                <Tooltip title="吞噬模式下，星体之间碰撞后将会生成一个更大的星体，其产生的引力也会随之增大">
+                <Tooltip title="吞噬模式下，天体之间碰撞后将会生成一个更大的天体，其产生的引力也会随之增大">
                   <span>吞噬模式</span>
                 </Tooltip>
 
@@ -137,13 +137,6 @@ const Index: FunctionComponent = () => {
                 />
               </li>
               <li>
-                <span>中心星体大小</span>
-                <InputNumber
-                  value={centerSize}
-                  onChange={value => setCenterSize(value as number)}
-                />
-              </li>
-              <li>
                 <span>引力大小</span>
                 <InputNumber
                   value={g}
@@ -151,20 +144,32 @@ const Index: FunctionComponent = () => {
                 />
               </li>
               <li>
-                <span style={{ width: '100%' }}>普通星体大小范围</span>
+                <span>中心天体大小</span>
                 <Slider
-                  min={1}
-                  max={10}
+                  min={0.1}
+                  max={30}
+                  step={0.1}
+                  value={centerSize}
+                  onChange={value => setCenterSize(value as number)}
+                  marks={{ 1: 1, 5: 5, 10: 10, 30: 30 }}
+                />
+              </li>
+              <li>
+                <span style={{ width: '100%' }}>普通天体大小范围</span>
+                <Slider
+                  min={0.1}
+                  max={30}
+                  step={0.1}
                   value={sizeRange}
                   range
                   onChange={value => {
                     setSizeRange(value as [number, number]);
                   }}
-                  marks={{ 1: 1, 5: 5, 10: 10 }}
+                  marks={{ 1: 1, 5: 5, 10: 10, 30: 30 }}
                 />
               </li>
               <li>
-                <span style={{ width: '100%' }}>普通星体速度范围</span>
+                <span style={{ width: '100%' }}>普通天体速度范围</span>
                 <Slider
                   min={0}
                   max={10}
@@ -191,7 +196,7 @@ const Index: FunctionComponent = () => {
                 />
               </li>
               <li>
-                <Tooltip title="播放速度调整是通过加快运算节奏来实现的，这与计算机算力挂钩，当算力不足时，调整播放速度是无效的。此时可以通过减小尾迹长度或初始星体数量来减少运算量。">
+                <Tooltip title="播放速度调整是通过加快运算节奏来实现的，这与计算机算力挂钩，当算力不足时，调整播放速度是无效的。此时可以通过减小尾迹长度或初始天体数量来减少运算量。">
                   <span style={{ width: '100%' }}>播放速度</span>
                 </Tooltip>
                 <Slider
@@ -206,7 +211,6 @@ const Index: FunctionComponent = () => {
                   marks={{ 0.1: '0.1', 1: '1', 2: '2', 5: '5' }}
                 />
               </li>
-
               <li>
                 <span>显示ID</span>
                 <Switch

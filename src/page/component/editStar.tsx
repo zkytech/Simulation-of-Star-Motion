@@ -4,7 +4,7 @@ import { InputNumber, Button, Row, Col, Slider } from 'antd';
 import style from '../style.module.less';
 import ColorPicker from './colorPicker';
 type IProps = {
-  star: Star2D; // 要编辑的星体
+  star: Star2D; // 要编辑的天体
   onSubmit: (star: Star2D) => void; // 编辑完成的回调
   onClose: (star: Star2D) => void; // 编辑取消回调
 };

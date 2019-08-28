@@ -167,7 +167,7 @@ class Star2D extends Star {
   /** 圆角度 */
   angle = Math.PI * 2; //为了避免重复计算，把这个作为一个常数属性
 
-  /** 绘制星体
+  /** 绘制天体
    * @param travelLength 尾迹长度
    * @param relativeTo 相对运动的参照物
    */
@@ -275,7 +275,7 @@ class Star3D extends Star {
   sphere: THREE.Mesh = {} as THREE.Mesh;
   textSprite: THREE.Sprite = {} as THREE.Sprite;
   lines: THREE.Line[] = [];
-  /**生成随机的3D星体*/
+  /**生成随机的3D天体*/
   public static ofRandom = (param: RandomStarGeneratorParam) => {
     const length = 800;
     const height = 800;
@@ -544,7 +544,7 @@ class Star3D extends Star {
     this.lines = [];
   };
 
-  /** 移除整个星体 */
+  /** 移除整个天体 */
   remove = () => {
     this.removeSphere();
     this.removeLines();

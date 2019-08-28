@@ -1,4 +1,4 @@
-/** 添加自定义星体的面板 */
+/** 添加自定义天体的面板 */
 import React, { FunctionComponent, useState } from 'react';
 import { Row, Col, InputNumber, Input, Button, Icon, Upload } from 'antd';
 import style from '../style.module.less';
@@ -219,7 +219,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit, params }) => {
         }}
         style={{ width: '100px' }}
       >
-        <Icon type="plus" /> 增加星体
+        <Icon type="plus" /> 增加天体
       </Button>
       <Upload
         beforeUpload={(file: File, fileList: any[]): false => {
@@ -240,7 +240,7 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit, params }) => {
         accept={'.json'}
       >
         <Button type={'dashed'}>
-          <Icon type="upload" /> 导入星体数据
+          <Icon type="upload" /> 导入天体数据
         </Button>
       </Upload>
       &emsp;&emsp;&emsp;
@@ -253,13 +253,13 @@ const Index: FunctionComponent<IProps> = ({ mode, onSubmit, params }) => {
           // 导出的数据格式
           saveAsJson(
             { stars: rowData, params: params },
-            `${new Date().toDateString()}星体数据.json`
+            `${new Date().toDateString()}天体数据.json`
           );
         }}
         style={{ position: 'absolute', right: '130px', bottom: '10px' }}
         type={'link'}
       >
-        导出星体数据
+        导出天体数据
       </Button>
       <Button
         onClick={submit}

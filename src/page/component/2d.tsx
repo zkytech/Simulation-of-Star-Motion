@@ -19,7 +19,7 @@ type IState = {
 type IProps = {
   /** 尾迹长度 */
   travelLength: number;
-  /** 初始星体数量 */
+  /** 初始天体数量 */
   initialNum: number;
   /** 恒星的体积 */
   centerSize: number;
@@ -28,7 +28,7 @@ type IProps = {
   g: number;
   /** 是否显示ID */
   showID: boolean;
-  /** 星体大小范围 */
+  /** 天体大小范围 */
   sizeRange: [number, number];
   /** 吞噬模式 */
   mergeMode: boolean;
@@ -82,9 +82,9 @@ export default class Index extends React.Component<IProps, IState> {
   canvas: HTMLCanvasElement | null = null;
   ctx: CanvasRenderingContext2D | null = null;
   mainProcess: any; // interval
-  forceDict: ForceDict2D = {}; // 星体受力字典
+  forceDict: ForceDict2D = {}; // 天体受力字典
   stars: Star2D[] = []; // 存储画面显示的所有star的列表
-  sandboxStars: Star2D[] = []; // 沙盒模式星体数据
+  sandboxStars: Star2D[] = []; // 沙盒模式天体数据
   focousedStar: Star2D | null = null; // 画面锁定的star
   predictStars: Star2D[] = []; // 预测得到的star信息
   tempStar: Star2D | null = null; // 沙盒编辑状态的临时star
@@ -266,7 +266,7 @@ export default class Index extends React.Component<IProps, IState> {
     this.refreshCanvas();
   };
 
-  /** 初始化星体列表 */
+  /** 初始化天体列表 */
   initStars = () => {
     if (this.props.sandboxMode) {
       this.initWithSandboxData(this.props.sandboxData);
@@ -276,7 +276,7 @@ export default class Index extends React.Component<IProps, IState> {
         this.addCenterStar();
       }
       const total = this.props.initialNum;
-      // 随机初始化其它星体
+      // 随机初始化其它天体
       for (let i = 1; i <= total; i++) {
         this.stars.push(
           Star2D.ofRandom({
@@ -339,7 +339,7 @@ export default class Index extends React.Component<IProps, IState> {
       let stars = this.stars;
 
       stars.forEach((star, index) => {
-        // 绘制星体
+        // 绘制天体
         star.draw(
           this.props.showID,
           this.props.travelLength,
@@ -348,7 +348,7 @@ export default class Index extends React.Component<IProps, IState> {
           this.props.relativeMode ? this.focousedStar : null
         );
 
-        // 移动星体到下一个位置
+        // 移动天体到下一个位置
         star.moveToNext(this.props.step, this.forceDict);
         stars[index] = star;
       });
@@ -419,7 +419,7 @@ export default class Index extends React.Component<IProps, IState> {
             x: P_x / (star1G + star2G),
             y: P_y / (star1G + star2G)
           };
-          // 对于未被清除的星体要计算其动量,对其受力和大小进行重新计算,由于真正的星体也不完全是刚性的，这里当作是只要碰撞就不会再分开
+          // 对于未被清除的天体要计算其动量,对其受力和大小进行重新计算,由于真正的天体也不完全是刚性的，这里当作是只要碰撞就不会再分开
           if (star1.size >= star2.size) {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
@@ -575,7 +575,7 @@ export default class Index extends React.Component<IProps, IState> {
         2,
         tempStar.color
       );
-      // 绘制临时星体
+      // 绘制临时天体
       tempStar.draw(
         this.props.showID,
         this.props.travelLength,
@@ -585,7 +585,7 @@ export default class Index extends React.Component<IProps, IState> {
       );
     }
 
-    // 绘制原本存在的星体
+    // 绘制原本存在的天体
     this.stars.forEach(star => {
       star.draw(
         this.props.showID,
@@ -675,7 +675,7 @@ export default class Index extends React.Component<IProps, IState> {
     // 开始绘制
     this.start();
   }
-  /** 点击编辑/删除/创建行星，进行暂停并重置星体状态 */
+  /** 点击编辑/删除/创建行星，进行暂停并重置天体状态 */
   onClickSandboxtools = () => {
     console.log(this.paused);
     if (!this.paused) {
@@ -686,7 +686,7 @@ export default class Index extends React.Component<IProps, IState> {
       this.refreshCanvas();
     }
   };
-  /** 沙盒添加星体状态 */
+  /** 沙盒添加天体状态 */
   sandboxtoolAddMode = (size: number) => {
     this.onClickSandboxtools();
     this.exitSandboxtool();
@@ -706,7 +706,7 @@ export default class Index extends React.Component<IProps, IState> {
     // 初始化箭头列表
     this.sandboxStarSize = size;
   };
-  /** 点击左键，在鼠标位置添加一个星体 */
+  /** 点击左键，在鼠标位置添加一个天体 */
   sandboxtoolAddStar = (e: MouseEvent | TouchEvent) => {
     // 获取画布坐标
 
@@ -773,7 +773,7 @@ export default class Index extends React.Component<IProps, IState> {
     // 刷新画布
     this.refreshCanvas();
   };
-  /** 拖动鼠标设置星体速度 */
+  /** 拖动鼠标设置天体速度 */
   sandboxtoolSetSpeed = (e: MouseEvent | TouchEvent) => {
     // 获取画布坐标
     const x = this.zoomedX_INV(
@@ -803,7 +803,7 @@ export default class Index extends React.Component<IProps, IState> {
     this.refreshCanvas();
   };
 
-  /** 左键抬起，完成添加星体 */
+  /** 左键抬起，完成添加天体 */
   sandboxtoolAddStarFinish = (e: MouseEvent | TouchEvent) => {
     const canvas = this.canvas as HTMLCanvasElement;
     // 移除鼠标移动事件
@@ -811,7 +811,7 @@ export default class Index extends React.Component<IProps, IState> {
     // 设置速度
     tempStar.speed.x = this.addStarSpeed.x;
     tempStar.speed.y = this.addStarSpeed.y;
-    // 保存星体
+    // 保存天体
     this.stars.push(tempStar.clone());
     // 同步保存到沙盒数据中
     this.sandboxStars.push(tempStar.clone());
@@ -823,7 +823,7 @@ export default class Index extends React.Component<IProps, IState> {
     canvas.removeEventListener('touchmove', this.sandboxtoolSetSpeed);
   };
 
-  /** 退出添加星体状态 */
+  /** 退出添加天体状态 */
   exitSandboxtoolAddMode = () => {
     if (this.sandboxToolMode === 'add') {
       const canvas = this.canvas as HTMLCanvasElement;
@@ -837,7 +837,7 @@ export default class Index extends React.Component<IProps, IState> {
   };
 
   sandboxStarSize = 10;
-  /** 删除星体 */
+  /** 删除天体 */
   sandboxtoolDeleteStarMode = () => {
     this.onClickSandboxtools();
     this.exitSandboxtool();
@@ -846,7 +846,7 @@ export default class Index extends React.Component<IProps, IState> {
     canvas.addEventListener('mousedown', this.sandboxtoolDeleteStar);
     this.sandboxToolMode = 'delete';
   };
-  /** 退出删除星体模式 */
+  /** 退出删除天体模式 */
   exitSandboxtoolDeleteMode = () => {
     if (this.sandboxToolMode === 'delete') {
       const canvas = this.canvas as HTMLCanvasElement;
@@ -856,7 +856,7 @@ export default class Index extends React.Component<IProps, IState> {
     }
   };
 
-  /** 删除星体 */
+  /** 删除天体 */
   sandboxtoolDeleteStar = (e: MouseEvent) => {
     const x = this.zoomedX_INV(e.clientX);
     const y = this.zoomedY_INV(e.clientY);
@@ -888,7 +888,7 @@ export default class Index extends React.Component<IProps, IState> {
     this.refreshCanvas();
   };
 
-  /** 编辑星体模式 */
+  /** 编辑天体模式 */
   sandboxtoolEditMode = () => {
     this.onClickSandboxtools();
     this.exitSandboxtool();
@@ -907,7 +907,7 @@ export default class Index extends React.Component<IProps, IState> {
       this.sandboxToolMode = null;
     }
   };
-  /** 编辑星体 */
+  /** 编辑天体 */
   sandboxtoolEditStar = (e: MouseEvent) => {
     const x = this.zoomedX_INV(e.clientX);
     const y = this.zoomedY_INV(e.clientY);
@@ -916,7 +916,7 @@ export default class Index extends React.Component<IProps, IState> {
       this.setState({ editTarget: star, editPanelVisible: true });
     }
   };
-  /** 根据坐标查找星体 */
+  /** 根据坐标查找天体 */
   findStarByPosition = (position: Vector2): Star2D | undefined => {
     let target;
     this.stars.forEach(star => {
@@ -1026,7 +1026,7 @@ export default class Index extends React.Component<IProps, IState> {
             transformOrigin: '20px  0'
           }}
         >
-          {/* 添加星体 */}
+          {/* 添加天体 */}
           <li
             className={
               this.state.selectedKey === 0 ? style.sandbox_tools_selected : ''
@@ -1044,7 +1044,7 @@ export default class Index extends React.Component<IProps, IState> {
               }}
             ></span>
           </li>
-          {/* 删除星体 */}
+          {/* 删除天体 */}
           <li
             className={
               this.state.selectedKey === 1 ? style.sandbox_tools_selected : ''
@@ -1262,10 +1262,10 @@ export default class Index extends React.Component<IProps, IState> {
                 <p>
                   使用说明：
                   <br />
-                  1. 点击左边合适大小的星体图标 <br />
-                  2. 点击屏幕任意位置，并按住鼠标左键或屏幕，生成星体 <br />
-                  3. 滚动鼠标滚轮可调整星体大小 <br />
-                  4. 拖动鼠标或手指，调整星体运动速度和方向 <br />
+                  1. 点击左边合适大小的天体图标 <br />
+                  2. 点击屏幕任意位置，并按住鼠标左键或屏幕，生成天体 <br />
+                  3. 滚动鼠标滚轮可调整天体大小 <br />
+                  4. 拖动鼠标或手指，调整天体运动速度和方向 <br />
                   5. 松开鼠标左键或手指。
                 </p>
               }
@@ -1320,7 +1320,7 @@ export default class Index extends React.Component<IProps, IState> {
             })}
         </ul>
         {this.state.editPanelVisible && isPC() ? (
-          /** 编辑星体的面板（可拖拽） */
+          /** 编辑天体的面板（可拖拽） */
           <Rnd
             default={{
               x: this.zoomedX((this.state.editTarget as Star2D).position.x),
@@ -1395,7 +1395,7 @@ export default class Index extends React.Component<IProps, IState> {
           type={'ghost'}
           className={style.status_button}
         >
-          {this.state.focousOnLargest ? '取消锁定' : '锁定最大星体'}
+          {this.state.focousOnLargest ? '取消锁定' : '锁定最大天体'}
         </Button>
         <Button
           onClick={this.resetView}

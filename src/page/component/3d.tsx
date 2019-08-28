@@ -11,7 +11,7 @@ type IState = {};
 type IProps = {
   /** 尾迹长度 */
   travelLength: number;
-  /** 初始星体数量 */
+  /** 初始天体数量 */
   initialNum: number;
   /** 恒星的体积 */
   centerSize: number;
@@ -20,7 +20,7 @@ type IProps = {
   g: number;
   /** 是否显示ID */
   showID: boolean;
-  /** 星体最大大小 */
+  /** 天体最大大小 */
   sizeRange: [number, number];
   /** 吞噬模式 */
   mergeMode: boolean;
@@ -76,7 +76,7 @@ export default class Index extends React.Component<IProps, IState> {
   light: THREE.Light | null = null;
   focousedStar: Star3D | null = null;
 
-  /** 获取初始星体列表 */
+  /** 获取初始天体列表 */
   initStars = (total: number) => {
     let stars: Star3D[] = [];
     if (this.props.sandboxMode) {
@@ -166,7 +166,7 @@ export default class Index extends React.Component<IProps, IState> {
             y: P_y / (star1G + star2G),
             z: P_z / (star1G + star2G)
           };
-          // 对于未被清除的星体要计算其动量,对其受力和大小进行重新计算,由于真正的星体也不完全是刚性的，这里当作是只要碰撞就不会再分开
+          // 对于未被清除的天体要计算其动量,对其受力和大小进行重新计算,由于真正的天体也不完全是刚性的，这里当作是只要碰撞就不会再分开
           if (star1.size >= star2.size) {
             // star2被吞噬
             deleteIndex.push(index2 + index1 + 1);
@@ -351,7 +351,7 @@ export default class Index extends React.Component<IProps, IState> {
   init = () => {
     const camera = this.camera;
     // this.scene.background = new THREE.Color('white');
-    // 初始化星体&尾迹
+    // 初始化天体&尾迹
     this.stars.forEach(star => {
       star.scene = this.scene;
       star.create(
