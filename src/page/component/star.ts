@@ -167,32 +167,36 @@ class Star2D extends Star {
   /** 圆角度 */
   angle = Math.PI * 2; //为了避免重复计算，把这个作为一个常数属性
 
-  /** 绘制星体 */
+  /** 绘制星体
+   * @param travelLength 尾迹长度
+   * @param relativeTo 相对运动的参照物
+   */
   draw = (
     showID: boolean,
     tarvelLength: number,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions,
-    focousOn: Star2D | null
+    relativeTo: Star2D | null
   ) => {
     // 绘制圆形&标签
-    this.drawArc(showID, ctx, zoom, focousOn);
+    this.drawArc(showID, ctx, zoom, relativeTo);
     // 绘制轨迹
-    this.drawTravel(tarvelLength, ctx, zoom, false, focousOn);
+    this.drawTravel(tarvelLength, ctx, zoom, false, relativeTo);
   };
 
   /** 绘制圆形
    * @param showID 是否显示id
+   * @param relativeTo 相对运动的参照物
    */
 
   drawArc = (
     showID: boolean,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions,
-    focousOn: Star2D | null
+    relativeTo: Star2D | null
   ) => {
-    const focousOnX = focousOn ? (focousOn as Star2D).position.x : 0;
-    const focousOnY = focousOn ? (focousOn as Star2D).position.y : 0;
+    const focousOnX = relativeTo ? (relativeTo as Star2D).position.x : 0;
+    const focousOnY = relativeTo ? (relativeTo as Star2D).position.y : 0;
     ctx.beginPath();
     ctx.arc(
       zoom.zoomedX(this.position.x - focousOnX),
@@ -218,13 +222,14 @@ class Star2D extends Star {
   /**
    * 绘制尾迹
    * @param travelLength 尾迹长度
+   * @param relativeTo 相对运动的参照物
    */
   drawTravel = (
     travelLength: number,
     ctx: CanvasRenderingContext2D,
     zoom: ZoomFunctions,
     predict: boolean = false,
-    focousOn: Star2D | null = null
+    relativeTo: Star2D | null = null
   ) => {
     if (travelLength === 0) {
       this.travel = [];
@@ -234,8 +239,8 @@ class Star2D extends Star {
     // 开始绘制
     ctx.beginPath();
     this.travel.forEach((value, index) => {
-      const focousOnX = focousOn ? (focousOn as Star2D).travel[index].x : 0;
-      const focousOnY = focousOn ? (focousOn as Star2D).travel[index].y : 0;
+      const focousOnX = relativeTo ? (relativeTo as Star2D).travel[index].x : 0;
+      const focousOnY = relativeTo ? (relativeTo as Star2D).travel[index].y : 0;
       if (index === 0)
         ctx.moveTo(
           zoom.zoomedX(value.x - focousOnX),
@@ -307,12 +312,31 @@ class Star3D extends Star {
       speed
     });
   };
+
+  /** 刷新场景而不进行移动 */
+  refresh = (travelLength:number,relativeTo: Star3D | null = null)=>{
+        this.sphere.position.x =
+        this.position.x - (relativeTo ? relativeTo.position.x : 0);
+      this.sphere.position.y =
+        this.position.y - (relativeTo ? relativeTo.position.y : 0);
+      this.sphere.position.z =
+        this.position.z - (relativeTo ? relativeTo.position.z : 0);
+      this.moveLines(travelLength, relativeTo);
+      this.moveTextSprite(relativeTo);
+  }
+
   /**
    * 移动到下一个位置
    * @param step 移动步长
    * @param travelLength 尾迹长度
+   * @param relativeTo 相对运动的参照物
    */
-  moveToNext = (step: number, forceDict: ForceDict3D, travelLength: number) => {
+  moveToNext = (
+    step: number,
+    forceDict: ForceDict3D,
+    travelLength: number,
+    relativeTo: Star3D | null = null
+  ) => {
     // 受力
     const force = forceDict[this.id];
     // 加速度
@@ -338,11 +362,14 @@ class Star3D extends Star {
     // 将坐标放入travel
     this.travel.push(deepCopy(this.position));
     // 移动场景中的物体
-    this.sphere.position.x = this.position.x;
-    this.sphere.position.y = this.position.y;
-    this.sphere.position.z = this.position.z;
-    this.moveLines(travelLength);
-    this.moveTextSprite();
+    this.sphere.position.x =
+      this.position.x - (relativeTo ? relativeTo.position.x : 0);
+    this.sphere.position.y =
+      this.position.y - (relativeTo ? relativeTo.position.y : 0);
+    this.sphere.position.z =
+      this.position.z - (relativeTo ? relativeTo.position.z : 0);
+    this.moveLines(travelLength, relativeTo);
+    this.moveTextSprite(relativeTo);
   };
 
   /** 绘制球体 */
@@ -396,7 +423,10 @@ class Star3D extends Star {
 
   /** 创建文字标签 */
   createSprite = () => {
-    const textSprite = makeTextSprite(this.id, { fontsize: 30 });
+    const textSprite = makeTextSprite(this.id, {
+      fontsize: 30
+      //@ts-ignore
+    });
     textSprite.position.x = this.position.x + 10;
     textSprite.position.y = this.position.y;
     textSprite.position.z = this.position.z;
@@ -411,15 +441,24 @@ class Star3D extends Star {
     if (showID) this.createSprite();
   };
 
-  moveTextSprite = () => {
+  /**
+   * @param relativeTo 相对运动参照物
+   */
+  moveTextSprite = (relativeTo: Star3D | null = null) => {
     if (!this.textSprite.position) return; // 如果场景中没有textSprite，直接返回
-    this.textSprite.position.x = this.position.x + 10;
-    this.textSprite.position.y = this.position.y;
-    this.textSprite.position.z = this.position.z;
+    this.textSprite.position.x =
+      this.position.x + 10 - (relativeTo ? relativeTo.position.x : 0);
+    this.textSprite.position.y =
+      this.position.y - (relativeTo ? relativeTo.position.y : 0);
+    this.textSprite.position.z =
+      this.position.z - (relativeTo ? relativeTo.position.z : 0);
   };
 
-  /** 移动线条 */
-  moveLines = (travelLength: number) => {
+  /** 移动线条
+   * @param tarvelLength 尾迹长度
+   * @param relativeTo 相对运动的参照物
+   */
+  moveLines = (travelLength: number, relativeTo: Star3D | null = null) => {
     // 保证travel数组的长度没有超过规定值
 
     this.travel = this.travel.slice(-travelLength);
@@ -429,9 +468,26 @@ class Star3D extends Star {
     lines.forEach((value, index) => {
       if (travel[index + 1]) {
         //@ts-ignore
-        value.geometry.vertices[0] = travel[index];
+        value.geometry.vertices[0].x =
+          travel[index].x - (relativeTo ? relativeTo.travel[index].x : 0);
         //@ts-ignore
-        value.geometry.vertices[1] = travel[index + 1];
+        value.geometry.vertices[0].y =
+          travel[index].y - (relativeTo ? relativeTo.travel[index].y : 0);
+        //@ts-ignore
+        value.geometry.vertices[0].z =
+          travel[index].z - (relativeTo ? relativeTo.travel[index].z : 0);
+        //@ts-ignore
+        value.geometry.vertices[1].x =
+          travel[index + 1].x -
+          (relativeTo ? relativeTo.travel[index + 1].x : 0);
+        //@ts-ignore
+        value.geometry.vertices[1].y =
+          travel[index + 1].y -
+          (relativeTo ? relativeTo.travel[index + 1].y : 0);
+        //@ts-ignore
+        value.geometry.vertices[1].z =
+          travel[index + 1].z -
+          (relativeTo ? relativeTo.travel[index + 1].z : 0);
         //@ts-ignore
         value.geometry.verticesNeedUpdate = true;
       }
@@ -442,7 +498,20 @@ class Star3D extends Star {
       // 添加线条
       for (let i = lines.length; i < travel.length; i++) {
         if (travel[i + 1]) {
-          this.createLine(travel[i], travel[i + 1]);
+          this.createLine(
+            {
+              x: travel[i].x - (relativeTo ? relativeTo.travel[i].x : 0),
+              y: travel[i].y - (relativeTo ? relativeTo.travel[i].y : 0),
+              z: travel[i].z - (relativeTo ? relativeTo.travel[i].z : 0)
+            },
+            {
+              x:
+                travel[i + 1].x - (relativeTo ? relativeTo.travel[i + 1].x : 0),
+              y:
+                travel[i + 1].y - (relativeTo ? relativeTo.travel[i + 1].y : 0),
+              z: travel[i + 1].z - (relativeTo ? relativeTo.travel[i + 1].z : 0)
+            }
+          );
         }
       }
     }
@@ -460,7 +529,7 @@ class Star3D extends Star {
   };
 
   /** 移除文字标签 */
-  removeTextSpire = () => {
+  removeTextSprite = () => {
     this.scene.remove(this.textSprite);
     this.textSprite = {} as THREE.Sprite;
   };
@@ -479,7 +548,7 @@ class Star3D extends Star {
   remove = () => {
     this.removeSphere();
     this.removeLines();
-    this.removeTextSpire();
+    this.removeTextSprite();
   };
 }
 

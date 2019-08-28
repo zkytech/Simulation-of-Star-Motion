@@ -347,8 +347,7 @@ export default class Index extends React.Component<IProps, IState> {
           this.zoomFunctions,
           this.props.relativeMode ? this.focousedStar : null
         );
-        // 如果是中心恒星，不移动
-        if (star.id === '#0') return;
+
         // 移动星体到下一个位置
         star.moveToNext(this.props.step, this.forceDict);
         stars[index] = star;
@@ -1279,12 +1278,7 @@ export default class Index extends React.Component<IProps, IState> {
         <ul className={style.info_panel}>
           {this.stars
             .sort((value1, value2) => value2.size - value1.size)
-            .slice(
-              0,
-              window.innerWidth < 1000
-                ? Math.floor((window.innerHeight - 150) / 30)
-                : Math.floor((window.innerHeight - 100) / 70)
-            )
+            .slice(0, Math.floor((window.innerHeight - 150) / 30))
             .map((value, index) => {
               if (index === 0 && this.state.focousOnLargest) {
                 this.focousedStar = value;
@@ -1309,7 +1303,7 @@ export default class Index extends React.Component<IProps, IState> {
                   }}
                   style={{
                     background: focoused ? 'RGBA(255,255,255,0.3)' : undefined,
-                    height: window.innerWidth < 1000 ? '30px' : '65px',
+                    height: '30px',
                     width: window.innerWidth < 1000 ? '50px' : undefined
                   }}
                 >
@@ -1319,11 +1313,6 @@ export default class Index extends React.Component<IProps, IState> {
                   ) : (
                     <span className={style.speed_info}>
                       mass:{value.mass.toFixed(3)}
-                      <br /> speed_x:
-                      {value.speed.x.toFixed(3)}
-                      <br />
-                      speed_y:
-                      {value.speed.y.toFixed(3)}
                     </span>
                   )}
                 </li>

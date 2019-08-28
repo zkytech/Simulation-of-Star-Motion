@@ -36,6 +36,8 @@ type IProps = {
   step: number;
   /** 隐藏中心恒星 */
   disableCenter: boolean;
+  /** 相对运动模式 */
+  relativeMode: boolean;
 };
 
 export default class Index extends React.Component<IProps, IState> {
@@ -51,7 +53,8 @@ export default class Index extends React.Component<IProps, IState> {
     playSpeed: 1,
     speedRange: [0, 5],
     step: 1,
-    disableCenter: false
+    disableCenter: false,
+    relativeMode: false
   };
 
   camera = new THREE.PerspectiveCamera(
@@ -173,14 +176,21 @@ export default class Index extends React.Component<IProps, IState> {
               changeList[star1.id] = star1;
             }
             // 移除star2
+            if (this.focousedStar && this.focousedStar.id === star2.id) {
+              this.focousedStar = null;
+            }
             star2.remove();
           } else {
+            // star1被吞噬
             deleteIndex.push(index1);
             if (this.props.mergeMode) star2.setSize = totalSize;
             star2.speed = speed;
             changeList[star2.id] = star2;
             // 移除star1
             star1.remove();
+            if (this.focousedStar && this.focousedStar.id === star1.id) {
+              this.focousedStar = null;
+            }
           }
         } else {
           // 计算引力，这里的g只是一个相对量，用于控制引力大小
@@ -224,9 +234,9 @@ export default class Index extends React.Component<IProps, IState> {
   /** 锁定视角 */
   focousOn = (star: Star3D) => {
     const controls = this.controls as TrackballControls;
-    controls.target.x = star.position.x;
-    controls.target.y = star.position.y;
-    controls.target.z = star.position.z;
+    controls.target.x = this.props.relativeMode ? 0 : star.position.x;
+    controls.target.y = this.props.relativeMode ? 0 : star.position.y;
+    controls.target.z = this.props.relativeMode ? 0 : star.position.z;
   };
 
   /**
@@ -240,6 +250,7 @@ export default class Index extends React.Component<IProps, IState> {
     if (this.mainProcess) clearInterval(this.mainProcess);
     setTimeout(() => {
       if (init) {
+        this.componentWillUnmount();
         this.camera = new THREE.PerspectiveCamera(
           60,
           window.innerWidth / window.innerHeight,
@@ -253,20 +264,24 @@ export default class Index extends React.Component<IProps, IState> {
         });
         this.controls = null;
         this.forceDict = {};
+        cancelAnimationFrame(this.animateFrame);
         this.animateFrame = undefined;
+
         this.init();
         this.animate();
       }
       this.mainProcess = setInterval(() => {
         this.calcForce();
         this.stars.forEach((star, index) => {
-          if (star.id === '#0') return;
+          if (star.id === '#0') this.moveLight(star);
           star.moveToNext(
             this.props.step,
             this.forceDict,
-            this.props.travelLength
+            this.props.travelLength,
+            this.props.relativeMode ? this.focousedStar : null
           );
         });
+
         if (this.focousedStar) {
           this.focousOn(this.focousedStar);
         }
@@ -277,13 +292,45 @@ export default class Index extends React.Component<IProps, IState> {
     }, 100);
   };
 
+  /** 移动光源 */
+  moveLight = (centerStar?: Star3D) => {
+    if (this.light) {
+      if (!centerStar) {
+        this.stars.every(star => {
+          if (star.id === '#0') {
+            centerStar = star;
+            return false;
+          }
+          return true;
+        });
+      }
+      centerStar = centerStar as Star3D;
+      if (this.props.relativeMode) {
+        this.light.position.set(
+          centerStar.position.x -
+            (this.focousedStar ? this.focousedStar.position.x : 0),
+          centerStar.position.y -
+            (this.focousedStar ? this.focousedStar.position.y : 0),
+          centerStar.position.z -
+            (this.focousedStar ? this.focousedStar.position.z : 0)
+        );
+      } else {
+        this.light.position.set(
+          centerStar.position.x,
+          centerStar.position.y,
+          centerStar.position.z
+        );
+      }
+    }
+  };
+
   /**
    * @param force 是否强制添加光源
    */
   createCenterLight = (force: boolean = false) => {
     // 光源
     const sphere = new THREE.SphereBufferGeometry(
-      this.props.centerSize,
+      this.props.centerSize + 1,
       50,
       50
     );
@@ -400,7 +447,7 @@ export default class Index extends React.Component<IProps, IState> {
         });
       } else {
         this.stars.forEach(star => {
-          star.removeTextSpire();
+          star.removeTextSprite();
         });
       }
     }
@@ -468,12 +515,7 @@ export default class Index extends React.Component<IProps, IState> {
         <ul className={style.info_panel + ` ${style.info_panel_3d}`}>
           {this.stars
             .sort((value1, value2) => value2.size - value1.size)
-            .slice(
-              0,
-              window.innerWidth < 1000
-                ? Math.floor((window.innerHeight - 150) / 30)
-                : Math.floor((window.innerHeight - 100) / 95)
-            )
+            .slice(0, Math.floor((window.innerHeight - 150) / 30))
             .map(value => {
               const focoused =
                 this.focousedStar && this.focousedStar.id === value.id;
@@ -485,11 +527,32 @@ export default class Index extends React.Component<IProps, IState> {
                       this.focousedStar = null;
                     } else {
                       this.focousedStar = value;
+                      let controls = this.controls as TrackballControls;
+                      if (this.props.relativeMode) {
+                        controls.object.position.set(0, 0, 200);
+                        controls.target.set(0, 0, 0);
+                        this.moveLight();
+                        // 重新绘制
+                        this.stars.forEach(star =>
+                          star.refresh(this.props.travelLength, value)
+                        );
+                      } else {
+                        controls.object.position.set(
+                          value.position.x,
+                          value.position.y,
+                          value.position.z + 200
+                        );
+                        controls.target.set(
+                          value.position.x,
+                          value.position.y,
+                          value.position.z
+                        );
+                      }
                     }
                   }}
                   style={{
                     background: focoused ? 'RGBA(255,255,255,0.3)' : undefined,
-                    height: window.innerWidth < 1000 ? '30px' : '90px',
+                    height: '30px',
                     width: window.innerWidth < 1000 ? '50px' : undefined
                   }}
                 >
@@ -498,11 +561,7 @@ export default class Index extends React.Component<IProps, IState> {
                     ''
                   ) : (
                     <span className={style.speed_info}>
-                      mass:{value.mass.toFixed(3)}&emsp; speed_x:
-                      {value.speed.x.toFixed(3)}
-                      &emsp;speed_y:
-                      {value.speed.y.toFixed(3)}&emsp;speed_z:
-                      {value.speed.z.toFixed(3)}
+                      mass:{value.mass.toFixed(3)}
                     </span>
                   )}
                 </li>

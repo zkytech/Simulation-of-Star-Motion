@@ -145,7 +145,9 @@ export const makeTextSprite = (message: string, parameters?: SpriteParam) => {
   const texture = new THREE.Texture(canvas);
   texture.needsUpdate = true;
 
-  const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map: texture
+  });
   const sprite = new THREE.Sprite(spriteMaterial);
 
   /* 缩放比例 */

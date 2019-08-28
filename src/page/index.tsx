@@ -52,7 +52,6 @@ const Index: FunctionComponent = () => {
   };
   const loadData = (data: ExportData) => {
     setSandboxMode(true);
-    console.log('indexLoadData', data);
     setSandboxData(data.stars);
     setCenterSize(data.params.centerSize);
     setDisableCenter(data.params.disableCenter);
@@ -92,22 +91,15 @@ const Index: FunctionComponent = () => {
             />
           </li>
           <li>
-            <Tooltip title="吞噬模式下，星体之间碰撞后将会生成一个更大的星体，其产生的引力也会随之增大">
-              <span>吞噬模式</span>
+            <Tooltip title="开启后请点击左侧天体列表选定相对运动参照物">
+              <span>相对运动视角</span>
             </Tooltip>
+            <Switch
+              checked={relativeMode}
+              onChange={checked => setRelativeMode(checked)}
+            />
+          </li>
 
-            <Switch
-              checked={mergeMode}
-              onChange={checked => setMergeMode(checked)}
-            />
-          </li>
-          <li>
-            <span>中心天体</span>
-            <Switch
-              checked={!disableCenter}
-              onChange={checked => setDisableCenter(!checked)}
-            />
-          </li>
           <li>
             <span className={style.input_prefix}>初始星体数量</span>
             <InputNumber
@@ -123,21 +115,41 @@ const Index: FunctionComponent = () => {
               onChange={value => setTravelLength(value as number)}
             />
           </li>
-          <li>
-            <span>中心星体大小</span>
-            <InputNumber
-              value={centerSize}
-              onChange={value => setCenterSize(value as number)}
-            />
-          </li>
-          <li>
-            <span>引力大小</span>
-            <InputNumber value={g} onChange={value => setG(value as number)} />
-          </li>
         </ul>
         <Collapse>
           <Panel header={'高级选项'} key={0}>
             <ul className={style.option_list}>
+              <li>
+                <Tooltip title="吞噬模式下，星体之间碰撞后将会生成一个更大的星体，其产生的引力也会随之增大">
+                  <span>吞噬模式</span>
+                </Tooltip>
+
+                <Switch
+                  checked={mergeMode}
+                  onChange={checked => setMergeMode(checked)}
+                />
+              </li>
+              <li>
+                <span>中心天体</span>
+                <Switch
+                  checked={!disableCenter}
+                  onChange={checked => setDisableCenter(!checked)}
+                />
+              </li>
+              <li>
+                <span>中心星体大小</span>
+                <InputNumber
+                  value={centerSize}
+                  onChange={value => setCenterSize(value as number)}
+                />
+              </li>
+              <li>
+                <span>引力大小</span>
+                <InputNumber
+                  value={g}
+                  onChange={value => setG(value as number)}
+                />
+              </li>
               <li>
                 <span style={{ width: '100%' }}>普通星体大小范围</span>
                 <Slider
@@ -194,17 +206,7 @@ const Index: FunctionComponent = () => {
                   marks={{ 0.1: '0.1', 1: '1', 2: '2', 5: '5' }}
                 />
               </li>
-              {mode === '2d' ? (
-                <li>
-                  <span>相对运动视角</span>
-                  <Switch
-                    checked={relativeMode}
-                    onChange={checked => setRelativeMode(checked)}
-                  />
-                </li>
-              ) : (
-                ''
-              )}
+
               <li>
                 <span>显示ID</span>
                 <Switch
@@ -339,6 +341,7 @@ const Index: FunctionComponent = () => {
           sandboxData={sandboxData}
           step={step}
           disableCenter={disableCenter}
+          relativeMode={relativeMode}
         />
       )}
       {window.screen.width < 720 ? (
