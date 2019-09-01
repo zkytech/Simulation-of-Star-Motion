@@ -23,7 +23,6 @@ type IProps = {
   initialNum: number;
   /** 恒星的体积 */
   centerSize: number;
-  canvasRef?: (ref: Index) => any;
   /** 引力G值 */
   g: number;
   /** 是否显示ID */
@@ -662,9 +661,6 @@ export default class Index extends React.Component<IProps, IState> {
 
   /** 组件加载完成后进行初始化动作 */
   componentDidMount() {
-    if (this.props.canvasRef) {
-      this.props.canvasRef(this);
-    }
     const canvas = this.canvas as HTMLCanvasElement;
     const hammer = new Hammer(canvas);
     this.hammer = hammer;

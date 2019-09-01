@@ -15,7 +15,6 @@ type IProps = {
   initialNum: number;
   /** 恒星的体积 */
   centerSize: number;
-  canvasRef?: (ref: Index) => any;
   /** 引力G值 */
   g: number;
   /** 是否显示ID */
@@ -416,7 +415,6 @@ export default class Index extends React.Component<IProps, IState> {
   };
 
   componentDidMount() {
-    if (this.props.canvasRef) this.props.canvasRef(this);
     this.start(true);
   }
 

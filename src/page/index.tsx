@@ -21,7 +21,7 @@ const Index: FunctionComponent = () => {
   const [starNum, setStarNum] = useState(500); // 初始天体数
   const [tarvelLength, setTravelLength] = useState(300); // 尾迹长度（支持实时调整）
   const [centerSize, setCenterSize] = useState(15); // 中心天体大小
-  const [ref, setRef] = useState<Canvas3D | Canvas2D>(); // ref
+  let ref = React.createRef<any>();
   const [g, setG] = useState(30); // 引力常量
   const [showId, setShowId] = useState(true); // 是否显示id
   const [sizeRange, setSizeRange] = useState<[number, number]>([1, 5]); // 天体大小范围
@@ -231,11 +231,11 @@ const Index: FunctionComponent = () => {
               onClick={() => {
                 if (!paused) {
                   //@ts-ignore
-                  ref.pause();
+                  ref.current.pause();
                   setPaused(true);
                 } else {
                   //@ts-ignore
-                  ref.start(false);
+                  ref.current.start(false);
                   setPaused(false);
                 }
               }}
@@ -246,7 +246,7 @@ const Index: FunctionComponent = () => {
             <Button
               onClick={() => {
                 //@ts-ignore
-                ref.start(true);
+                ref.current.start(true);
                 setPaused(false);
                 setPhonePanelVisible(false);
               }}
@@ -260,7 +260,7 @@ const Index: FunctionComponent = () => {
               <Button
                 onClick={() => {
                   //@ts-ignore
-                  ref.pause();
+                  ref.current.pause();
                   setPaused(true);
                   if (mode === '2d') {
                     setSandboxMode(true);
@@ -284,7 +284,7 @@ const Index: FunctionComponent = () => {
                   setSandboxMode(false);
                   setTimeout(() => {
                     //@ts-ignore
-                    ref.start();
+                    ref.current.start();
                   }, 100);
                 }}
                 type={'primary'}
@@ -307,10 +307,7 @@ const Index: FunctionComponent = () => {
           centerSize={centerSize}
           travelLength={tarvelLength}
           initialNum={starNum}
-          canvasRef={canvas => {
-            //@ts-ignore
-            setRef(canvas);
-          }}
+          ref={ref}
           g={g}
           showID={showId}
           sizeRange={sizeRange}
@@ -331,10 +328,7 @@ const Index: FunctionComponent = () => {
           centerSize={centerSize}
           travelLength={tarvelLength}
           initialNum={starNum}
-          canvasRef={canvas => {
-            //@ts-ignore
-            setRef(canvas);
-          }}
+          ref={ref}
           g={g}
           showID={showId}
           sizeRange={sizeRange}
@@ -353,7 +347,7 @@ const Index: FunctionComponent = () => {
           style={{ position: 'fixed', top: '10px', right: '10px' }}
           onClick={() => {
             //@ts-ignore
-            ref.pause();
+            ref.current.pause();
             setPaused(true);
             setPhonePanelVisible(true);
           }}
@@ -371,7 +365,7 @@ const Index: FunctionComponent = () => {
           // 取消时清除暂停状态
           setPaused(false);
           //@ts-ignore
-          ref.start(false);
+          ref.current.start(false);
         }}
         style={{ width: '1200px!important' }}
         width={1200}
@@ -394,7 +388,7 @@ const Index: FunctionComponent = () => {
             setPaused(false);
             setTimeout(() => {
               // @ts-ignore
-              ref.start(true);
+              ref.current.start(true);
             }, 100);
           }}
         />
@@ -407,7 +401,7 @@ const Index: FunctionComponent = () => {
           // 取消时清除暂停状态
           setPaused(false);
           //@ts-ignore
-          ref.start(false);
+          ref.current.start(false);
         }}
         width={600}
         footer={null}
