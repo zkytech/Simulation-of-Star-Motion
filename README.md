@@ -6,7 +6,7 @@
 
 `yarn start`
 
-[在线预览](https://public.zkytech.top/stars/index.html)
+[在线预览](http://119.29.128.164:27879/stars/index.html)
 
 已针对移动端进行适配，支持使用手机进行所有操作。
 
